@@ -28,7 +28,7 @@ impl TwitchMessage {
 #[derive(Builder, Clone, PartialEq, Eq, Debug)]
 #[builder(setter(into))]
 pub struct Tags {
-    badges: Badges,
+    badges: Badge,
     color: String,
     display_name: String,
     emote_only: bool,
@@ -97,7 +97,7 @@ pub enum CommandType {
 }
 
 #[derive(Default, Clone, PartialEq, Eq, Debug)]
-pub struct Badges {
+pub struct Badge {
     pub admin: Option<String>,
     pub bits: Option<String>,
     pub broadcaster: Option<String>,

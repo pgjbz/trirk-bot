@@ -1,4 +1,4 @@
-use self::twitch::TwitchMessage;
+use self::twitch::{Badge, Tags, TagsBuilder, TwitchMessage};
 
 pub mod twitch;
 
@@ -12,7 +12,66 @@ impl TrirkParser {
     }
 
     pub fn parse<T: Into<String>>(&self, msg: T) -> TwitchMessage {
+        let msg: String = msg.into();
+        if msg.starts_with('@') {
+            let sub_str: String = msg.chars().take_while(|x| x != &' ').collect();
+            let tags = self.parse_tags(sub_str);
+        }
         todo!()
+    }
+
+    /*
+    color=#FF0000;
+    display-name=PetsgomOO;
+    emote-only=1;
+    emotes=33:0-7;
+    id=c285c9ed-8b1b-4702-ae1c-c64d76cc74ef;
+    mod=0;
+    room-id=81046256;
+    subscriber=0;
+    turbo=0;
+    tmi-sent-ts=1550868292494;
+    user-id=81046256;
+    user-type=staff
+    flags=0-7:A.6/P.6,25-36:A.1/I.2;
+    */
+    fn parse_tags(&self, input: String) -> Tags {
+        let splited = input.split(';');
+        let mut tags = TagsBuilder::default();
+        for value in splited {
+            let mut key_value = value.split('=');
+            let Some(key) = key_value.next() else { continue; };
+            let Some(value) = key_value.next() else { continue; };
+            match key {
+                "@badges" => {
+                    let badge: Badge = self.parse_badges(value);
+                    tags.badges(badge);
+                }
+                _ => continue,
+            }
+        }
+        todo!()
+    }
+
+    fn parse_badges(&self, value: &str) -> Badge {
+        let badge_pair = value.split(',');
+        let mut badge = Badge::default();
+        for badge_key_value in badge_pair {
+            let mut key_value = badge_key_value.split('/');
+            let Some(key) = key_value.next() else { continue; };
+            let Some(value) = key_value.next() else { continue; };
+            match key {
+                "admin" => badge.admin = Some(value.to_owned()),
+                "bits" => badge.bits = Some(value.to_owned()),
+                "broadcaster" => badge.broadcaster = Some(value.to_owned()),
+                "moderator" => badge.moderator = Some(value.to_owned()),
+                "subscriber" => badge.subscriber = Some(value.to_owned()),
+                "staff" => badge.staff = Some(value.to_owned()),
+                "turbo" => badge.turbo = Some(value.to_owned()),
+                _ => continue,
+            }
+        }
+        badge
     }
 }
 
@@ -20,7 +79,7 @@ impl TrirkParser {
 mod test {
 
     use super::{
-        twitch::{Badges, Command, CommandType, Emote, Source, TagsBuilder},
+        twitch::{Badge, Command, CommandType, Emote, Source, TagsBuilder},
         *,
     };
 
@@ -31,7 +90,7 @@ mod test {
         let twitch_message = parser.parse(msg);
         let source = Source::new("petsgomoo", "petsgomoo@petsgomoo.tmi.twitch.tv");
         let command = Command::new(CommandType::PrivMSG, "#petsgomoo");
-        let mut badges = Badges::default();
+        let mut badges = Badge::default();
         badges.staff = Some("1".into());
         badges.broadcaster = Some("1".into());
         badges.turbo = Some("1".into());
@@ -49,7 +108,8 @@ mod test {
             .tmi_sent_ts(1550868292494usize)
             .user_id("81046256")
             .user_type("staff")
-            .build().unwrap();
+            .build()
+            .unwrap();
         let parameters = "DansGame";
         let expected_message = TwitchMessage::new(parameters, command, source, Some(tags));
     }
