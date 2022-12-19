@@ -107,7 +107,6 @@ pub struct Badge {
     pub turbo: Option<String>,
 }
 
-
 #[derive(PartialEq, Eq, Debug)]
 pub struct Source {
     nick: String,

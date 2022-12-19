@@ -1,4 +1,4 @@
-use self::twitch::{Badge, Tags, TagsBuilder, TwitchMessage};
+use self::twitch::{Badge, Emote, Tags, TagsBuilder, TwitchMessage};
 
 pub mod twitch;
 
@@ -20,21 +20,6 @@ impl TrirkParser {
         todo!()
     }
 
-    /*
-    color=#FF0000;
-    display-name=PetsgomOO;
-    emote-only=1;
-    emotes=33:0-7;
-    id=c285c9ed-8b1b-4702-ae1c-c64d76cc74ef;
-    mod=0;
-    room-id=81046256;
-    subscriber=0;
-    turbo=0;
-    tmi-sent-ts=1550868292494;
-    user-id=81046256;
-    user-type=staff
-    flags=0-7:A.6/P.6,25-36:A.1/I.2;
-    */
     fn parse_tags(&self, input: String) -> Tags {
         let splited = input.split(';');
         let mut tags = TagsBuilder::default();
@@ -47,6 +32,30 @@ impl TrirkParser {
                     let badge: Badge = self.parse_badges(value);
                     tags.badges(badge);
                 }
+                "color" => {
+                    tags.color(value);
+                }
+                "display-name" => {
+                    tags.display_name(value);
+                }
+                "emote-only" => {
+                    tags.emote_only(value == "1");
+                }
+                "emotes" => {
+                    let emotes: Vec<Emote> = self.parse_emotes(value);
+                }
+                /*
+
+                id=c285c9ed-8b1b-4702-ae1c-c64d76cc74ef;
+                mod=0;
+                room-id=81046256;
+                subscriber=0;
+                turbo=0;
+                tmi-sent-ts=1550868292494;
+                user-id=81046256;
+                user-type=staff
+                flags=0-7:A.6/P.6,25-36:A.1/I.2;
+                */
                 _ => continue,
             }
         }
@@ -72,6 +81,25 @@ impl TrirkParser {
             }
         }
         badge
+    }
+
+    //emotes=33:0-7;
+    fn parse_emotes(&self, value: &str) -> Vec<Emote> {
+        let emotes_pair = value.split(',');
+        let mut emotes: Vec<Emote> = Vec::new();
+        for emote_key_value in emotes_pair {
+            let mut code_value = emote_key_value.split(':');
+            let Some(code) = code_value.next() else { continue; };
+            let Some(position) = code_value.next() else { continue; };
+            let mut start_end = position.split('-');
+            let Some(start) = start_end.next() else { continue; };
+            let Some(end) = start_end.next() else { continue; };
+            let Ok(start) = start.parse::<usize>() else { continue; };
+            let Ok(end) = end.parse::<usize>() else { continue; };
+            let emote = Emote::new(code, start, end);
+            emotes.push(emote);
+        }
+        emotes
     }
 }
 
