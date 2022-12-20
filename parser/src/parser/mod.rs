@@ -115,13 +115,13 @@ impl TrirkParser {
             let Some(key) = key_value.next() else { continue; };
             let Some(value) = key_value.next() else { continue; };
             match key {
-                "admin" => badge.admin = Some(value.to_owned()),
-                "bits" => badge.bits = Some(value.to_owned()),
-                "broadcaster" => badge.broadcaster = Some(value.to_owned()),
-                "moderator" => badge.moderator = Some(value.to_owned()),
-                "subscriber" => badge.subscriber = Some(value.to_owned()),
-                "staff" => badge.staff = Some(value.to_owned()),
-                "turbo" => badge.turbo = Some(value.to_owned()),
+                "admin" => badge.set_admin(value.to_owned()),
+                "bits" => badge.set_bits(value.to_owned()),
+                "broadcaster" => badge.set_broadcaster(value.to_owned()),
+                "moderator" => badge.set_moderator(value.to_owned()),
+                "subscriber" => badge.set_subscriber(value.to_owned()),
+                "staff" => badge.set_staff(value.to_owned()),
+                "turbo" => badge.set_turbo(value.to_owned()),
                 _ => continue,
             }
         }
@@ -165,7 +165,7 @@ impl TrirkParser {
     fn parse_parameter(&self, value: &str) -> Option<String> {
         //#lovingt3s :!dilly
         let Some(idx) = value.find(':') else { return None };
-        Some(value[idx+1..].into())
+        Some(value[idx + 1..].into())
     }
 }
 
@@ -185,9 +185,9 @@ mod test {
         let source = Source::new("petsgomoo", "petsgomoo@petsgomoo.tmi.twitch.tv");
         let command = Command::new(CommandType::PrivMSG, "#petsgomoo");
         let mut badges = Badge::default();
-        badges.staff = Some("1".into());
-        badges.broadcaster = Some("1".into());
-        badges.turbo = Some("1".into());
+        badges.set_staff("1".into());
+        badges.set_broadcaster("1".into());
+        badges.set_turbo("1".into());
         let tags = TagsBuilder::default()
             .badges(badges)
             .color("#FF0000")
@@ -222,5 +222,13 @@ mod test {
         let parameters = "!dilly";
         let expected_message = TwitchMessage::new(Some(parameters), command, Some(source), None);
         assert_eq!(expected_message, twitch_message);
+    }
+
+    #[test]
+    fn should_parse_ping() {
+        let msg: String = "PING".into();
+        let parser: TrirkParser = TrirkParser::new();
+        let twitch_message = parser.parse(msg);
+        assert_eq!(CommandType::Ping, twitch_message.command().command())
     }
 }
