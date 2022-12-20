@@ -17,11 +17,7 @@ impl TwitchMessage {
         tags: Option<Tags>,
     ) -> Self {
         Self {
-            parameters: if parameters.is_some() {
-                Some(parameters.unwrap().into())
-            } else {
-                None
-            },
+            parameters: parameters.map(|parameters| parameters.into()),
             command,
             source,
             tags,

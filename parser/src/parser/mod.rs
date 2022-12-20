@@ -1,4 +1,4 @@
-use self::twitch::{Badge, Emote, Tags, TwitchMessage, Source, Command, CommandType};
+use self::twitch::{Badge, Command, CommandType, Emote, Source, Tags, TwitchMessage};
 
 pub mod twitch;
 
@@ -30,10 +30,15 @@ impl TrirkParser {
             let source: Source = self.parse_source(&sub_msg[..space_idx]);
             idx = space_idx + 2;
             source
-        } else { 
-            return TwitchMessage::new::<&str>(None, Command::new(CommandType::Ping, ""), None, tags)
-         };
-        
+        } else {
+            return TwitchMessage::new::<&str>(
+                None,
+                Command::new(CommandType::Ping, ""),
+                None,
+                tags,
+            );
+        };
+
         let (command, add_idx) = self.parse_command(&msg[idx..], &source);
         idx += add_idx + 1;
         let parameter = self.parse_parameter(&msg[idx..]);
@@ -145,7 +150,7 @@ impl TrirkParser {
         let Some(bang_idx) = value.find('!') else { panic!() };
         let Some(at_idx) = value.find('@') else { panic!() };
         let nick = &value[0..bang_idx];
-        let host = &value[at_idx+1..];
+        let host = &value[at_idx + 1..];
         Source::new(nick, host)
     }
 
@@ -199,7 +204,8 @@ mod test {
             .build()
             .unwrap();
         let parameters = "DansGame";
-        let expected_message = TwitchMessage::new(Some(parameters), command, Some(source), Some(tags));
+        let expected_message =
+            TwitchMessage::new(Some(parameters), command, Some(source), Some(tags));
     }
 
     #[test]
