@@ -162,9 +162,10 @@ impl TrirkParser {
         (command, space_idx)
     }
 
-    fn parse_parameter(&self, idx: &str) -> Option<String> {
+    fn parse_parameter(&self, value: &str) -> Option<String> {
         //#lovingt3s :!dilly
-        todo!()
+        let Some(idx) = value.find(':') else { return None };
+        Some(value[idx+1..].into())
     }
 }
 
@@ -201,6 +202,8 @@ mod test {
             .tmi_sent_ts(1550868292494usize)
             .user_id("81046256")
             .user_type("staff")
+            .vip(false)
+            .reply_parent_msg_id("")
             .build()
             .unwrap();
         let parameters = "DansGame";
