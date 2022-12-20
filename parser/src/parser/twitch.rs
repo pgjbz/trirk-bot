@@ -2,22 +2,26 @@ use derive_builder::Builder;
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct TwitchMessage {
-    parameters: String,
+    parameters: Option<String>,
     command: Command,
-    source: Source,
+    source: Option<Source>,
     tags: Option<Tags>,
 }
 
 impl TwitchMessage {
     #[inline(always)]
     pub fn new<T: Into<String>>(
-        parameters: T,
+        parameters: Option<T>,
         command: Command,
-        source: Source,
+        source: Option<Source>,
         tags: Option<Tags>,
     ) -> Self {
         Self {
-            parameters: parameters.into(),
+            parameters: if parameters.is_some() {
+                Some(parameters.unwrap().into())
+            } else {
+                None
+            },
             command,
             source,
             tags,
@@ -43,6 +47,28 @@ pub struct Tags {
     user_type: String,
     vip: bool,
     reply_parent_msg_id: String,
+}
+
+impl Tags {
+    pub fn builder() -> TagsBuilder {
+        let mut builder = TagsBuilder::default();
+        builder
+            .vip(false)
+            .badges(Badge::default())
+            .color("")
+            .display_name("")
+            .emote_only(false)
+            .emotes(vec![])
+            .r#mod(false)
+            .room_id("")
+            .subscriber(false)
+            .turbo(false)
+            .tmi_sent_ts(usize::MIN)
+            .user_id("")
+            .user_type("")
+            .reply_parent_msg_id("");
+        builder
+    }
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -96,6 +122,26 @@ pub enum CommandType {
     Unknown,
 }
 
+impl From<&str> for CommandType {
+    fn from(value: &str) -> Self {
+        match value {
+            "PRIVMSG" => Self::PrivMSG,
+            "PART" => Self::Part,
+            "NOTICE" => Self::Notice,
+            "CLEARCHAT" => Self::ClearChat,
+            "HOSTTARGEtT" => Self::HostTarget,
+            "PING" => Self::Ping,
+            "CAP" => Self::Cap,
+            "GLOBALUSERSTATE" => Self::GlobalUserState,
+            "USERSTATE" => Self::UserState,
+            "ROOMSTAT" => Self::RoomState,
+            "RECONNECT" => Self::Reconnect,
+            _ if value.parse::<usize>().is_ok() => Self::Numeric,
+            _ => Self::Unknown,
+        }
+    }
+}
+
 #[derive(Default, Clone, PartialEq, Eq, Debug)]
 pub struct Badge {
     pub admin: Option<String>,
@@ -120,5 +166,9 @@ impl Source {
             nick: nick.into(),
             host: host.into(),
         }
+    }
+
+    pub fn nick(&self) -> String {
+        self.nick.clone()
     }
 }

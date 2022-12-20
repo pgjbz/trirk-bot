@@ -1,4 +1,4 @@
-use self::twitch::{Badge, Emote, Tags, TagsBuilder, TwitchMessage};
+use self::twitch::{Badge, Emote, Tags, TwitchMessage, Source, Command, CommandType};
 
 pub mod twitch;
 
@@ -13,16 +13,36 @@ impl TrirkParser {
 
     pub fn parse<T: Into<String>>(&self, msg: T) -> TwitchMessage {
         let msg: String = msg.into();
-        if msg.starts_with('@') {
-            let sub_str: String = msg.chars().take_while(|x| x != &' ').collect();
-            let tags = self.parse_tags(sub_str);
-        }
-        todo!()
+        let mut idx = 0;
+        let tags: Option<Tags> = if msg.starts_with('@') {
+            let Some(space_idx) = msg.find(' ') else { panic!() };
+            idx = space_idx + 1;
+            let sub_str = &msg[0..space_idx];
+            Some(self.parse_tags(sub_str))
+        } else {
+            None
+        };
+        let Some(current_char)= msg.get(idx..idx+1) else { panic!() };
+        let source = if current_char == ":" {
+            idx += 1;
+            let sub_msg = &msg[idx..];
+            let Some(space_idx) = sub_msg.find(' ') else { panic!() };
+            let source: Source = self.parse_source(&sub_msg[..space_idx]);
+            idx = space_idx + 2;
+            source
+        } else { 
+            return TwitchMessage::new::<&str>(None, Command::new(CommandType::Ping, ""), None, tags)
+         };
+        
+        let (command, add_idx) = self.parse_command(&msg[idx..], &source);
+        idx += add_idx + 1;
+        let parameter = self.parse_parameter(&msg[idx..]);
+        TwitchMessage::new(parameter, command, Some(source), tags)
     }
 
-    fn parse_tags(&self, input: String) -> Tags {
+    fn parse_tags(&self, input: &str) -> Tags {
         let splited = input.split(';');
-        let mut tags = TagsBuilder::default();
+        let mut tags = Tags::builder();
         for value in splited {
             let mut key_value = value.split('=');
             let Some(key) = key_value.next() else { continue; };
@@ -79,7 +99,7 @@ impl TrirkParser {
                 _ => continue,
             }
         }
-        todo!()
+        tags.build().unwrap()
     }
 
     fn parse_badges(&self, value: &str) -> Badge {
@@ -103,7 +123,6 @@ impl TrirkParser {
         badge
     }
 
-    //emotes=33:0-7;
     fn parse_emotes(&self, value: &str) -> Vec<Emote> {
         let emotes_pair = value.split(',');
         let mut emotes: Vec<Emote> = Vec::new();
@@ -120,6 +139,27 @@ impl TrirkParser {
             emotes.push(emote);
         }
         emotes
+    }
+
+    fn parse_source(&self, value: &str) -> Source {
+        let Some(bang_idx) = value.find('!') else { panic!() };
+        let Some(at_idx) = value.find('@') else { panic!() };
+        let nick = &value[0..bang_idx];
+        let host = &value[at_idx+1..];
+        Source::new(nick, host)
+    }
+
+    fn parse_command(&self, value: &str, source: &Source) -> (Command, usize) {
+        let Some(space_idx) = value.find(' ') else { panic!() };
+        let value = &value[..space_idx];
+        dbg!(&value);
+        let command = Command::new(CommandType::from(value), source.nick());
+        (command, space_idx)
+    }
+
+    fn parse_parameter(&self, idx: &str) -> Option<String> {
+        //#lovingt3s :!dilly
+        todo!()
     }
 }
 
@@ -159,7 +199,7 @@ mod test {
             .build()
             .unwrap();
         let parameters = "DansGame";
-        let expected_message = TwitchMessage::new(parameters, command, source, Some(tags));
+        let expected_message = TwitchMessage::new(Some(parameters), command, Some(source), Some(tags));
     }
 
     #[test]
@@ -171,7 +211,7 @@ mod test {
         let source = Source::new("lovingt3s", "lovingt3s.tmi.twitch.tv");
         let command = Command::new(CommandType::PrivMSG, "lovingt3s");
         let parameters = "!dilly";
-        let expected_message = TwitchMessage::new(parameters, command, source, None);
+        let expected_message = TwitchMessage::new(Some(parameters), command, Some(source), None);
         assert_eq!(expected_message, twitch_message);
     }
 }
