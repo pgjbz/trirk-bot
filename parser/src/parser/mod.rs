@@ -263,4 +263,25 @@ mod test {
         );
         assert_eq!(expected_message, twitch_message);
     }
+
+    #[test]
+    fn should_parse_notice_with_two_tags() {
+        let msg: String = "@msg-id=whisper_restricted;target-user-id=12345678 :tmi.twitch.tv NOTICE #bar :Your settings prevent you from sending this whisper.".into();
+        let parser: TrirkParser = TrirkParser::new();
+        let twitch_message = parser.parse(msg);
+        let command = Command::new(CommandType::Notice, "");
+        let source = Source::new("", "tmi.twitch.tv");
+        let tags = Tags::builder()
+            .message_id("whisper_restricted")
+            .target_user_id("12345678")
+            .build()
+            .unwrap();
+        let expected_message = TwitchMessage::new(
+            Some("Your settings prevent you from sending this whisper."),
+            command,
+            Some(source),
+            Some(tags),
+        );
+        assert_eq!(expected_message, twitch_message);
+    }
 }
