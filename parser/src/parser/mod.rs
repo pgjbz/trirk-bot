@@ -28,7 +28,7 @@ impl TrirkParser {
             let sub_msg = &msg[idx..];
             let Some(space_idx) = sub_msg.find(' ') else { panic!() };
             let source: Source = self.parse_source(&sub_msg[..space_idx]);
-            idx = space_idx + 2;
+            idx += space_idx + 1;
             source
         } else {
             return TwitchMessage::new::<&str>(
@@ -101,6 +101,12 @@ impl TrirkParser {
                 "reply-parent-msg-id" => {
                     tags.reply_parent_msg_id(value);
                 }
+                "@msg-id" => {
+                    tags.message_id(value);
+                }
+                "target-user-id" => {
+                    tags.target_user_id(value);
+                }
                 _ => continue,
             }
         }
@@ -147,23 +153,29 @@ impl TrirkParser {
     }
 
     fn parse_source(&self, value: &str) -> Source {
-        let Some(bang_idx) = value.find('!') else { panic!() };
-        let Some(at_idx) = value.find('@') else { panic!() };
-        let nick = &value[0..bang_idx];
-        let host = &value[at_idx + 1..];
-        Source::new(nick, host)
+        /*
+            :lovingt3s!lovingt3s@
+        */
+        let bang_idx = value.find('!');
+        let at_idx = value.find('@');
+        match (bang_idx, at_idx) {
+            (Some(bang_idx), Some(at_idx)) => {
+                let nick = &value[0..bang_idx];
+                let host = &value[at_idx + 1..];
+                Source::new(nick, host)
+            }
+            _ => Source::new("", value),
+        }
     }
 
     fn parse_command(&self, value: &str, source: &Source) -> (Command, usize) {
         let Some(space_idx) = value.find(' ') else { panic!() };
         let value = &value[..space_idx];
-        dbg!(&value);
         let command = Command::new(CommandType::from(value), source.nick());
         (command, space_idx)
     }
 
     fn parse_parameter(&self, value: &str) -> Option<String> {
-        //#lovingt3s :!dilly
         let Some(idx) = value.find(':') else { return None };
         Some(value[idx + 1..].into())
     }
@@ -173,7 +185,7 @@ impl TrirkParser {
 mod test {
 
     use super::{
-        twitch::{Badge, Command, CommandType, Emote, Source, TagsBuilder},
+        twitch::{Badge, Command, CommandType, Emote, Source},
         *,
     };
 
@@ -188,7 +200,7 @@ mod test {
         badges.set_staff("1".into());
         badges.set_broadcaster("1".into());
         badges.set_turbo("1".into());
-        let tags = TagsBuilder::default()
+        let tags = Tags::builder()
             .badges(badges)
             .color("#FF0000")
             .display_name("PetsgomOO")
@@ -230,5 +242,25 @@ mod test {
         let parser: TrirkParser = TrirkParser::new();
         let twitch_message = parser.parse(msg);
         assert_eq!(CommandType::Ping, twitch_message.command().command())
+    }
+
+    #[test]
+    fn should_parse_notice() {
+        let msg: String = "@msg-id=delete_message_success :tmi.twitch.tv NOTICE #bar :The message from foo is now deleted.".into();
+        let parser: TrirkParser = TrirkParser::new();
+        let twitch_message = parser.parse(msg);
+        let command = Command::new(CommandType::Notice, "");
+        let source = Source::new("", "tmi.twitch.tv");
+        let tags = Tags::builder()
+            .message_id("delete_message_success")
+            .build()
+            .unwrap();
+        let expected_message = TwitchMessage::new(
+            Some("The message from foo is now deleted."),
+            command,
+            Some(source),
+            Some(tags),
+        );
+        assert_eq!(expected_message, twitch_message);
     }
 }

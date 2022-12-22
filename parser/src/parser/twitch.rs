@@ -56,6 +56,8 @@ pub struct Tags {
     user_type: String,
     vip: bool,
     reply_parent_msg_id: String,
+    target_user_id: String,
+    message_id: String,
 }
 
 impl Tags {
@@ -75,7 +77,10 @@ impl Tags {
             .tmi_sent_ts(usize::MIN)
             .user_id("")
             .user_type("")
-            .reply_parent_msg_id("");
+            .target_user_id("")
+            .message_id("")
+            .reply_parent_msg_id("")
+            .id("");
         builder
     }
 
@@ -92,7 +97,7 @@ impl Tags {
     }
 
     pub fn emote_only(&self) -> bool {
-        self.emote_only.clone()
+        self.emote_only
     }
 
     pub fn emotes(&self) -> Option<Vec<Emote>> {
@@ -104,7 +109,7 @@ impl Tags {
     }
 
     pub fn r(&self) -> bool {
-        self.r#mod.clone()
+        self.r#mod
     }
 
     pub fn room_id(&self) -> String {
@@ -112,15 +117,15 @@ impl Tags {
     }
 
     pub fn subscriber(&self) -> bool {
-        self.subscriber.clone()
+        self.subscriber
     }
 
     pub fn turbo(&self) -> bool {
-        self.turbo.clone()
+        self.turbo
     }
 
     pub fn tmi_sent_ts(&self) -> usize {
-        self.tmi_sent_ts.clone()
+        self.tmi_sent_ts
     }
 
     pub fn user_id(&self) -> String {
@@ -132,7 +137,7 @@ impl Tags {
     }
 
     pub fn vip(&self) -> bool {
-        self.vip.clone()
+        self.vip
     }
 
     pub fn reply_parent_msg_id(&self) -> String {
@@ -164,7 +169,7 @@ impl Emote {
     pub fn start_position(&self) -> usize {
         self.start_position
     }
-    
+
     pub fn end_position(&self) -> usize {
         self.end_position
     }
