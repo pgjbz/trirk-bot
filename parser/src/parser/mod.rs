@@ -107,6 +107,9 @@ impl TrirkParser {
                 "target-user-id" => {
                     tags.target_user_id(value);
                 }
+                "@room-id" => {
+                    tags.room_id(value);
+                }
                 _ => continue,
             }
         }
@@ -278,6 +281,28 @@ mod test {
             .unwrap();
         let expected_message = TwitchMessage::new(
             Some("Your settings prevent you from sending this whisper."),
+            command,
+            Some(source),
+            Some(tags),
+        );
+        assert_eq!(expected_message, twitch_message);
+    }
+
+    #[test]
+    fn should_parse_clearchat() {
+        let msg: String = "@room-id=12345678;target-user-id=87654321;tmi-sent-ts=1642715756806 :tmi.twitch.tv CLEARCHAT #dallas :ronni".into();
+        let parser: TrirkParser = TrirkParser::new();
+        let twitch_message = parser.parse(msg);
+        let command = Command::new(CommandType::ClearChat, "");
+        let source = Source::new("", "tmi.twitch.tv");
+        let tags = Tags::builder()
+            .room_id("12345678")
+            .tmi_sent_ts(1642715756806usize)
+            .target_user_id("87654321")
+            .build()
+            .unwrap();
+        let expected_message = TwitchMessage::new(
+            Some("ronni"),
             command,
             Some(source),
             Some(tags),
