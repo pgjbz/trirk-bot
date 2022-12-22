@@ -58,6 +58,7 @@ pub struct Tags {
     reply_parent_msg_id: String,
     target_user_id: String,
     message_id: String,
+    ban_duration: usize
 }
 
 impl Tags {
@@ -80,6 +81,7 @@ impl Tags {
             .target_user_id("")
             .message_id("")
             .reply_parent_msg_id("")
+            .ban_duration(0usize)
             .id("");
         builder
     }

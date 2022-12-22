@@ -110,6 +110,9 @@ impl TrirkParser {
                 "@room-id" => {
                     tags.room_id(value);
                 }
+                "@ban-duration" => {
+                    tags.ban_duration(value.parse::<usize>().unwrap_or_else(|_| 0));
+                }
                 _ => continue,
             }
         }
@@ -299,6 +302,29 @@ mod test {
             .room_id("12345678")
             .tmi_sent_ts(1642715756806usize)
             .target_user_id("87654321")
+            .build()
+            .unwrap();
+        let expected_message = TwitchMessage::new(
+            Some("ronni"),
+            command,
+            Some(source),
+            Some(tags),
+        );
+        assert_eq!(expected_message, twitch_message);
+    }
+
+    #[test]
+    fn should_parse_clearchat_with_ban_tag() {
+        let msg: String = "@ban-duration=350;room-id=12345678;target-user-id=87654321;tmi-sent-ts=1642719320727 :tmi.twitch.tv CLEARCHAT #dallas :ronni".into();
+        let parser: TrirkParser = TrirkParser::new();
+        let twitch_message = parser.parse(msg);
+        let command = Command::new(CommandType::ClearChat, "");
+        let source = Source::new("", "tmi.twitch.tv");
+        let tags = Tags::builder()
+            .room_id("12345678")
+            .tmi_sent_ts(1642719320727usize)
+            .target_user_id("87654321")
+            .ban_duration(350usize)
             .build()
             .unwrap();
         let expected_message = TwitchMessage::new(
