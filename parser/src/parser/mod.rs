@@ -279,7 +279,7 @@ mod test {
         let msg: String = "PING".into();
         let parser: TrirkParser = TrirkParser::new();
         let twitch_message = parser.parse(msg);
-        assert_eq!(CommandType::Ping, twitch_message.command().command())
+        assert_eq!(&CommandType::Ping, twitch_message.command().command())
     }
 
     #[test]
