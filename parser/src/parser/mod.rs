@@ -83,7 +83,7 @@ impl TrirkParser {
                     tags.subscriber(value == "1");
                 }
                 "turbo" => {
-                    tags.turbo(value == "0");
+                    tags.turbo(value == "1");
                 }
                 "tmi-sent-ts" => {
                     let Ok(value) = value.parse::<usize>() else {continue;};
@@ -122,6 +122,21 @@ impl TrirkParser {
                 "emote-sets" => {
                     let emote_sets = self.parse_emote_sets(value);
                     tags.emote_sets(emote_sets);
+                }
+                "@emote-only" => {
+                    tags.emote_only(value == "1");
+                }
+                "followers-only" => {
+                    tags.followers_only(value == "1");
+                }
+                "r9k" => {
+                    tags.r9k(value == "1");
+                }
+                "slow" | "@slow" => {
+                    tags.slow(value.parse::<usize>().unwrap_or(0));
+                }
+                "subs-only" => {
+                    tags.subs_only(value == "1");
                 }
                 _ => continue,
             }
@@ -397,5 +412,36 @@ mod test {
         let parameters = "DansGame";
         let expected_message =
             TwitchMessage::new(Some(parameters), command, Some(source), Some(tags));
+    }
+
+    #[test]
+    fn should_parse_roomstate() {
+        let msg: String = "@emote-only=0;followers-only=0;r9k=0;slow=0;subs-only=0 :tmi.twitch.tv ROOMSTATE #dallas".into();
+        let parser: TrirkParser = TrirkParser::new();
+        let twitch_message = parser.parse(msg);
+        let command = Command::new(CommandType::RoomState, "");
+        let source = Source::new("", "tmi.twitch.tv");
+        let tags = Tags::builder()
+            .emote_only(false)
+            .followers_only(false)
+            .r9k(false)
+            .slow(0usize)
+            .subs_only(false)
+            .build()
+            .unwrap();
+        let expected_message = TwitchMessage::new::<&str>(None, command, Some(source), Some(tags));
+        assert_eq!(expected_message, twitch_message);
+    }
+
+    #[test]
+    fn should_parse_roomstate_slow() {
+        let msg: String = "@slow=10 :tmi.twitch.tv ROOMSTATE #dallas".into();
+        let parser: TrirkParser = TrirkParser::new();
+        let twitch_message = parser.parse(msg);
+        let command = Command::new(CommandType::RoomState, "");
+        let source = Source::new("", "tmi.twitch.tv");
+        let tags = Tags::builder().slow(10usize).build().unwrap();
+        let expected_message = TwitchMessage::new::<&str>(None, command, Some(source), Some(tags));
+        assert_eq!(expected_message, twitch_message);
     }
 }

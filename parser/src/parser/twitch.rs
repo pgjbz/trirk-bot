@@ -62,6 +62,10 @@ pub struct Tags {
     login: String,
     target_message_id: String,
     emote_sets: Vec<usize>,
+    followers_only: bool,
+    r9k: bool,
+    slow: usize,
+    subs_only: bool,
 }
 
 impl Tags {
@@ -88,6 +92,10 @@ impl Tags {
             .ban_duration(0usize)
             .target_message_id("")
             .emote_sets(vec![])
+            .followers_only(false)
+            .r9k(false)
+            .slow(usize::MIN)
+            .subs_only(false)
             .id("");
         builder
     }
@@ -237,7 +245,7 @@ impl From<&str> for CommandType {
             "CAP" => Self::Cap,
             "GLOBALUSERSTATE" => Self::GlobalUserState,
             "USERSTATE" => Self::UserState,
-            "ROOMSTAT" => Self::RoomState,
+            "ROOMSTATE" => Self::RoomState,
             "RECONNECT" => Self::Reconnect,
             "CLEARMSG" => Self::ClearMessage,
             _ if value.parse::<usize>().is_ok() => Self::Numeric,
