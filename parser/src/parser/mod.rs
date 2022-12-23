@@ -23,7 +23,7 @@ impl TrirkParser {
         } else {
             None
         };
-        let Some(current_char)= msg.get(idx..idx+1) else { panic!() };
+        let Some(current_char)= msg.get(idx..idx+1) else { panic!("{msg}") };
         let source = if current_char == ":" {
             idx += 1;
             let sub_msg = &msg[idx..];

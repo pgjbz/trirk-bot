@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 
 connection = { path = "../connection"}
+tokio = { version = "^1.23", features = ["full"] }
+dotenv = "^0.15"
