@@ -3,12 +3,13 @@ use self::twitch::{Badge, Command, CommandType, Emote, Source, Tags, TwitchMessa
 pub mod twitch;
 
 #[non_exhaustive]
+#[derive(Default)]
 pub struct TrirkParser;
 
 impl TrirkParser {
     #[inline(always)]
     pub fn new() -> Self {
-        Self
+        Self::default()
     }
 
     pub fn parse<T: Into<String>>(&self, msg: T) -> TwitchMessage {
