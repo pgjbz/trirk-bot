@@ -58,7 +58,9 @@ pub struct Tags {
     reply_parent_msg_id: String,
     target_user_id: String,
     message_id: String,
-    ban_duration: usize
+    ban_duration: usize,
+    login: String,
+    target_message_id: String,
 }
 
 impl Tags {
@@ -81,7 +83,9 @@ impl Tags {
             .target_user_id("")
             .message_id("")
             .reply_parent_msg_id("")
+            .login("")
             .ban_duration(0usize)
+            .target_message_id("")
             .id("");
         builder
     }
@@ -208,6 +212,7 @@ pub enum CommandType {
     Notice,
     ClearChat,
     HostTarget,
+    ClearMessage,
     Ping,
     Cap,
     GlobalUserState,
@@ -232,6 +237,7 @@ impl From<&str> for CommandType {
             "USERSTATE" => Self::UserState,
             "ROOMSTAT" => Self::RoomState,
             "RECONNECT" => Self::Reconnect,
+            "CLEARMSG" => Self::ClearMessage,
             _ if value.parse::<usize>().is_ok() => Self::Numeric,
             _ => Self::Unknown,
         }

@@ -111,7 +111,13 @@ impl TrirkParser {
                     tags.room_id(value);
                 }
                 "@ban-duration" => {
-                    tags.ban_duration(value.parse::<usize>().unwrap_or_else(|_| 0));
+                    tags.ban_duration(value.parse::<usize>().unwrap_or(0));
+                }
+                "@login" => {
+                    tags.login(value);
+                }
+                "target-msg-id" => {
+                    tags.target_message_id(value);
                 }
                 _ => continue,
             }
@@ -304,12 +310,7 @@ mod test {
             .target_user_id("87654321")
             .build()
             .unwrap();
-        let expected_message = TwitchMessage::new(
-            Some("ronni"),
-            command,
-            Some(source),
-            Some(tags),
-        );
+        let expected_message = TwitchMessage::new(Some("ronni"), command, Some(source), Some(tags));
         assert_eq!(expected_message, twitch_message);
     }
 
@@ -327,12 +328,26 @@ mod test {
             .ban_duration(350usize)
             .build()
             .unwrap();
-        let expected_message = TwitchMessage::new(
-            Some("ronni"),
-            command,
-            Some(source),
-            Some(tags),
-        );
+        let expected_message = TwitchMessage::new(Some("ronni"), command, Some(source), Some(tags));
+        assert_eq!(expected_message, twitch_message);
+    }
+
+    #[test]
+    fn should_parse_clearmessage() {
+        let msg: String = "@login=ronni;room-id=;target-msg-id=abc-123-def;tmi-sent-ts=1642720582342 :tmi.twitch.tv CLEARMSG #dallas :HeyGuys".into();
+        let parser: TrirkParser = TrirkParser::new();
+        let twitch_message = parser.parse(msg);
+        let command = Command::new(CommandType::ClearMessage, "");
+        let source = Source::new("", "tmi.twitch.tv");
+        let tags = Tags::builder()
+            .room_id("")
+            .tmi_sent_ts(1642720582342usize)
+            .target_message_id("abc-123-def")
+            .login("ronni")
+            .build()
+            .unwrap();
+        let expected_message =
+            TwitchMessage::new(Some("HeyGuys"), command, Some(source), Some(tags));
         assert_eq!(expected_message, twitch_message);
     }
 }
