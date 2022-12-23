@@ -45,7 +45,7 @@ pub struct Tags {
     color: String,
     display_name: String,
     emote_only: bool,
-    emotes: Option<Vec<Emote>>,
+    emotes: Vec<Emote>,
     id: String,
     r#mod: bool,
     room_id: String,
@@ -61,6 +61,7 @@ pub struct Tags {
     ban_duration: usize,
     login: String,
     target_message_id: String,
+    emote_sets: Vec<usize>,
 }
 
 impl Tags {
@@ -86,6 +87,7 @@ impl Tags {
             .login("")
             .ban_duration(0usize)
             .target_message_id("")
+            .emote_sets(vec![])
             .id("");
         builder
     }
@@ -106,7 +108,7 @@ impl Tags {
         self.emote_only
     }
 
-    pub fn emotes(&self) -> Option<Vec<Emote>> {
+    pub fn emotes(&self) -> Vec<Emote> {
         self.emotes.clone()
     }
 

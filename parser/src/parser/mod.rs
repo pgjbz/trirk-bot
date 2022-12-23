@@ -119,6 +119,10 @@ impl TrirkParser {
                 "target-msg-id" => {
                     tags.target_message_id(value);
                 }
+                "emote-sets" => {
+                    let emote_sets = self.parse_emote_sets(value);
+                    tags.emote_sets(emote_sets);
+                }
                 _ => continue,
             }
         }
@@ -181,7 +185,7 @@ impl TrirkParser {
     }
 
     fn parse_command(&self, value: &str, source: &Source) -> (Command, usize) {
-        let Some(space_idx) = value.find(' ') else { panic!() };
+        let Some(space_idx) = value.find(' ') else { return (Command::new(CommandType::from(value), source.nick()), 0) };
         let value = &value[..space_idx];
         let command = Command::new(CommandType::from(value), source.nick());
         (command, space_idx)
@@ -190,6 +194,13 @@ impl TrirkParser {
     fn parse_parameter(&self, value: &str) -> Option<String> {
         let Some(idx) = value.find(':') else { return None };
         Some(value[idx + 1..].into())
+    }
+
+    fn parse_emote_sets(&self, value: &str) -> Vec<usize> {
+        value
+            .split(',')
+            .map(|v| v.parse::<usize>().unwrap_or(0))
+            .collect()
     }
 }
 
@@ -349,5 +360,42 @@ mod test {
         let expected_message =
             TwitchMessage::new(Some("HeyGuys"), command, Some(source), Some(tags));
         assert_eq!(expected_message, twitch_message);
+    }
+
+    #[test]
+    fn should_parse_globaluserstate() {
+        let msg: String = "@badge-info=subscriber/8;badges=subscriber/6;color=#0D4200;display-name=dallas;emote-sets=0,33,50,237,793,2126,3517,4578,5569,9400,10337,12239;turbo=0;user-id=12345678;user-type=admin :tmi.twitch.tv GLOBALUSERSTATE".into();
+        let parser: TrirkParser = TrirkParser::new();
+        let twitch_message = parser.parse(msg);
+        let source = Source::new("petsgomoo", "petsgomoo@petsgomoo.tmi.twitch.tv");
+        let command = Command::new(CommandType::PrivMSG, "#petsgomoo");
+        let mut badges = Badge::default();
+        badges.set_staff("1".into());
+        badges.set_broadcaster("1".into());
+        badges.set_turbo("1".into());
+        let tags = Tags::builder()
+            .badges(badges)
+            .color("#0D4200")
+            .display_name("dallas")
+            .emote_sets(vec![
+                0, 33, 50, 237, 793, 2126, 3517, 4578, 5569, 9400, 10337, 12239,
+            ])
+            .emote_only(true)
+            .emotes(vec![Emote::new("33", 0, 7)])
+            .id("c285c9ed-8b1b-4702-ae1c-c64d76cc74ef")
+            .r#mod(false)
+            .room_id("81046256")
+            .subscriber(false)
+            .turbo(false)
+            .tmi_sent_ts(1550868292494usize)
+            .user_id("81046256")
+            .user_type("staff")
+            .vip(false)
+            .reply_parent_msg_id("")
+            .build()
+            .unwrap();
+        let parameters = "DansGame";
+        let expected_message =
+            TwitchMessage::new(Some(parameters), command, Some(source), Some(tags));
     }
 }
