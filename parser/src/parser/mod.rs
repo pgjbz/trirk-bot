@@ -54,7 +54,7 @@ impl TrirkParser {
             let Some(key) = key_value.next() else { continue; };
             let Some(value) = key_value.next() else { continue; };
             match key {
-                "@badges" => {
+                "@badges" | "badges" => {
                     let badge: Badge = self.parse_badges(value);
                     tags.badges(badge);
                 }
@@ -185,9 +185,6 @@ impl TrirkParser {
     }
 
     fn parse_source(&self, value: &str) -> Source {
-        /*
-            :lovingt3s!lovingt3s@
-        */
         let bang_idx = value.find('!');
         let at_idx = value.find('@');
         match (bang_idx, at_idx) {
@@ -233,8 +230,8 @@ mod test {
         let msg: String = "@badges=staff/1,broadcaster/1,turbo/1;color=#FF0000;display-name=PetsgomOO;emote-only=1;emotes=33:0-7;flags=0-7:A.6/P.6,25-36:A.1/I.2;id=c285c9ed-8b1b-4702-ae1c-c64d76cc74ef;mod=0;room-id=81046256;subscriber=0;turbo=0;tmi-sent-ts=1550868292494;user-id=81046256;user-type=staff :petsgomoo!petsgomoo@petsgomoo.tmi.twitch.tv PRIVMSG #petsgomoo :DansGame".into();
         let parser: TrirkParser = TrirkParser::new();
         let twitch_message = parser.parse(msg);
-        let source = Source::new("petsgomoo", "petsgomoo@petsgomoo.tmi.twitch.tv");
-        let command = Command::new(CommandType::PrivMSG, "#petsgomoo");
+        let source = Source::new("petsgomoo", "petsgomoo.tmi.twitch.tv");
+        let command = Command::new(CommandType::PrivMSG, "petsgomoo");
         let mut badges = Badge::default();
         badges.set_staff("1".into());
         badges.set_broadcaster("1".into());
@@ -260,6 +257,7 @@ mod test {
         let parameters = "DansGame";
         let expected_message =
             TwitchMessage::new(Some(parameters), command, Some(source), Some(tags));
+        assert_eq!(expected_message, twitch_message);
     }
 
     #[test]
@@ -383,36 +381,25 @@ mod test {
         let msg: String = "@badge-info=subscriber/8;badges=subscriber/6;color=#0D4200;display-name=dallas;emote-sets=0,33,50,237,793,2126,3517,4578,5569,9400,10337,12239;turbo=0;user-id=12345678;user-type=admin :tmi.twitch.tv GLOBALUSERSTATE".into();
         let parser: TrirkParser = TrirkParser::new();
         let twitch_message = parser.parse(msg);
-        let source = Source::new("petsgomoo", "petsgomoo@petsgomoo.tmi.twitch.tv");
-        let command = Command::new(CommandType::PrivMSG, "#petsgomoo");
+        let source = Source::new("", "tmi.twitch.tv");
+        let command = Command::new(CommandType::GlobalUserState, "");
         let mut badges = Badge::default();
-        badges.set_staff("1".into());
-        badges.set_broadcaster("1".into());
-        badges.set_turbo("1".into());
+        badges.set_subscriber("6".into());
         let tags = Tags::builder()
             .badges(badges)
             .color("#0D4200")
             .display_name("dallas")
+            .user_id("12345678")
             .emote_sets(vec![
                 0, 33, 50, 237, 793, 2126, 3517, 4578, 5569, 9400, 10337, 12239,
             ])
-            .emote_only(true)
-            .emotes(vec![Emote::new("33", 0, 7)])
-            .id("c285c9ed-8b1b-4702-ae1c-c64d76cc74ef")
-            .r#mod(false)
-            .room_id("81046256")
-            .subscriber(false)
-            .turbo(false)
-            .tmi_sent_ts(1550868292494usize)
-            .user_id("81046256")
-            .user_type("staff")
-            .vip(false)
-            .reply_parent_msg_id("")
+            .user_type("admin")
+            .user_id("12345678")
             .build()
             .unwrap();
-        let parameters = "DansGame";
         let expected_message =
-            TwitchMessage::new(Some(parameters), command, Some(source), Some(tags));
+            TwitchMessage::new::<&str>(None, command, Some(source), Some(tags));
+        assert_eq!(expected_message, twitch_message);
     }
 
     #[test]
