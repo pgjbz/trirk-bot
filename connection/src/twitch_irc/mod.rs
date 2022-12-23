@@ -79,11 +79,4 @@ impl TwitchIrc<TcpStream> {
 #[cfg(test)]
 mod tests {
 
-    use super::*;
-
-    #[test]
-    fn foo() {
-        let irc = TwitchIrc::new("", "", "");
-        irc.open_connection();
-    }
 }
