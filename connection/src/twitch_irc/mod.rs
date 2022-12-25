@@ -1,4 +1,4 @@
-use parser::{TwitchMessage, parser::TrirkParser};
+use parser::{TwitchMessage, trirk_parser::TrirkParser};
 use std::io::Result;
 use tokio::{
     io::{AsyncWriteExt, AsyncReadExt},
@@ -53,16 +53,14 @@ impl TwitchIrc<()> {
 
 }
 
-impl TwitchIrc<TcpStream> {
+impl<T: AsyncReadExt + AsyncWriteExt + Unpin> TwitchIrc<T> {
     pub async fn send_command(&mut self, message: &str) -> Result<()> {
-        self.connection.writable().await?;
         self.connection.write_all(message.as_bytes()).await?;
         Ok(())
     }
 
     pub async fn read_next(&mut self) -> Result<TwitchMessage> {
         let mut buffer = vec![0; 1024];
-        self.connection.readable().await?;
         match self.connection.read(&mut buffer).await {
             Ok(size) => {
                 buffer.truncate(size);
