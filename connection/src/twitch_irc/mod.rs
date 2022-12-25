@@ -5,7 +5,7 @@ use tokio::{
     net::TcpStream,
 };
 
-const IRC_HOST: &'static str = "irc.chat.twitch.tv";
+const IRC_HOST: &str = "irc.chat.twitch.tv";
 const IRC_PORT: usize = 6667;
 
 pub struct TwitchIrc<T> {
@@ -54,9 +54,13 @@ impl TwitchIrc<()> {
 }
 
 impl<T: AsyncReadExt + AsyncWriteExt + Unpin> TwitchIrc<T> {
-    pub async fn send_command(&mut self, message: &str) -> Result<()> {
-        self.connection.write_all(message.as_bytes()).await?;
+    pub async fn send_bytes(&mut self, message: &[u8]) -> Result<()> {
+        self.connection.write_all(message).await?;
         Ok(())
+    }
+
+    pub async fn privmsg(&mut self, message: &str) -> Result<()> {
+        self.send_bytes(format!("PRIVMSG #{} :{}\r\n", self.channel, message).as_bytes()).await
     }
 
     pub async fn read_next(&mut self) -> Result<TwitchMessage> {

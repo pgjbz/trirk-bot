@@ -13,6 +13,7 @@ async fn main() -> std::io::Result<()> {
     let irc = TwitchIrc::new(channel, oauth, nickname);
     let mut irc_connection = irc.open_connection().await?;
     println!("listen socket");
+    irc_connection.privmsg("sauvi").await?;
     while let Ok(msg) = irc_connection.read_next().await {
         dbg!(msg);
     }
