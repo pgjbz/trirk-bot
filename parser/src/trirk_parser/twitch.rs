@@ -24,7 +24,6 @@ impl TwitchMessage {
             tags,
         }
     }
-
 }
 
 #[derive(Builder, Clone, PartialEq, Eq, Debug, Getters)]
@@ -88,7 +87,6 @@ impl Tags {
             .id("");
         builder
     }
-
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Getters)]
@@ -123,7 +121,6 @@ impl Command {
             channel: channel.into(),
         }
     }
-
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -177,7 +174,6 @@ pub struct Badge {
 }
 
 impl Badge {
-
     pub fn set_admin(&mut self, admin: String) {
         self.admin = Some(admin);
     }
@@ -221,6 +217,4 @@ impl Source {
             host: host.into(),
         }
     }
-
-
 }

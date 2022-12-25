@@ -1,7 +1,8 @@
-use parser::{TwitchMessage, trirk_parser::TrirkParser};
-use std::io::Result;
+use std::error::Error;
+
+use parser::{trirk_parser::TrirkParser, TwitchMessage};
 use tokio::{
-    io::{AsyncWriteExt, AsyncReadExt},
+    io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
 
@@ -26,19 +27,28 @@ impl TwitchIrc<()> {
         }
     }
 
-    pub async fn open_connection(self) -> Result<TwitchIrc<TcpStream>> {
-        println!("opening connection for channel '{}', with nickname '{}'", self.channel, self.nickname);
+    pub async fn open_connection(self) -> Result<TwitchIrc<TcpStream>, Box<dyn Error>> {
+        println!(
+            "opening connection for channel '{}', with nickname '{}'",
+            self.channel, self.nickname
+        );
         let mut connection = TcpStream::connect(format!("{}:{}", IRC_HOST, IRC_PORT)).await?;
-        
+
         connection
-        .write_all(format!("PASS {}\r\nNICK {}\r\nJOIN #{}\r\n", self.oauth, self.nickname, self.channel).as_bytes())
-        .await?;
+            .write_all(
+                format!(
+                    "PASS {}\r\nNICK {}\r\nJOIN #{}\r\n",
+                    self.oauth, self.nickname, self.channel
+                )
+                .as_bytes(),
+            )
+            .await?;
         connection
-        .write_all(b"CAP REQ :twitch.tv/commands\r\n")
-        .await?;
+            .write_all(b"CAP REQ :twitch.tv/commands\r\n")
+            .await?;
         connection
-        .write_all(b"CAP REQ :twitch.tv/membership\r\n")
-        .await?;
+            .write_all(b"CAP REQ :twitch.tv/membership\r\n")
+            .await?;
         connection.write_all(b"CAP REQ :twitch.tv/tags\r\n").await?;
         connection.flush().await?;
         let irc = TwitchIrc::<TcpStream> {
@@ -49,36 +59,33 @@ impl TwitchIrc<()> {
         };
         Ok(irc)
     }
-
-
 }
 
 impl<T: AsyncReadExt + AsyncWriteExt + Unpin> TwitchIrc<T> {
-    pub async fn send_bytes(&mut self, message: &[u8]) -> Result<()> {
+    pub async fn send_bytes(&mut self, message: &[u8]) -> Result<(), Box<dyn Error>> {
         self.connection.write_all(message).await?;
         Ok(())
     }
 
-    pub async fn privmsg(&mut self, message: &str) -> Result<()> {
-        self.send_bytes(format!("PRIVMSG #{} :{}\r\n", self.channel, message).as_bytes()).await
+    pub async fn privmsg(&mut self, message: &str) -> Result<(), Box<dyn Error>> {
+        self.send_bytes(format!("PRIVMSG #{} :{}\r\n", self.channel, message).as_bytes())
+            .await
     }
 
-    pub async fn read_next(&mut self) -> Result<TwitchMessage> {
+    pub async fn read_next(&mut self) -> Result<TwitchMessage, Box<dyn Error>> {
         let mut buffer = vec![0; 1024];
         match self.connection.read(&mut buffer).await {
             Ok(size) => {
                 buffer.truncate(size);
                 let message = String::from_utf8_lossy(&buffer);
                 let trirk_parser = TrirkParser::new();
-                let twitch_message = trirk_parser.parse(message);
+                let twitch_message = trirk_parser.parse(message)?;
                 Ok(twitch_message)
             }
-            Err(e) => Err(e),
+            Err(e) => Err(e)?,
         }
     }
 }
 
 #[cfg(test)]
-mod tests {
-
-}
+mod tests {}

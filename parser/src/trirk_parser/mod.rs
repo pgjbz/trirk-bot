@@ -1,5 +1,9 @@
-use self::twitch::{Badge, Command, CommandType, Emote, Source, Tags, TwitchMessage};
+use self::{
+    error::UnparsableError,
+    twitch::{Badge, Command, CommandType, Emote, Source, Tags, TwitchMessage},
+};
 
+pub mod error;
 pub mod twitch;
 
 #[non_exhaustive]
@@ -12,8 +16,17 @@ impl TrirkParser {
         Self::default()
     }
 
-    pub fn parse<T: Into<String>>(&self, msg: T) -> TwitchMessage {
+    pub fn parse<T: Into<String>>(&self, msg: T) -> Result<TwitchMessage, UnparsableError> {
         let msg: String = msg.into();
+        let create_error = || {
+            Err(UnparsableError::new(format!(
+                "error on parse message: {}",
+                msg
+            )))
+        };
+        if msg.is_empty() {
+            return Err(UnparsableError::new("empty irc message"));
+        }
         let mut idx = 0;
         let tags: Option<Tags> = if msg.starts_with('@') {
             let Some(space_idx) = msg.find(' ') else { panic!() };
@@ -23,7 +36,9 @@ impl TrirkParser {
         } else {
             None
         };
-        let Some(current_char)= msg.get(idx..idx+1) else { panic!("{msg}") };
+        let Some(current_char)= msg.get(idx..idx+1) else { 
+            return create_error();
+        };
         let source = if current_char == ":" {
             idx += 1;
             let sub_msg = &msg[idx..];
@@ -32,18 +47,21 @@ impl TrirkParser {
             idx += space_idx + 1;
             source
         } else {
-            return TwitchMessage::new::<&str>(
-                None,
-                Command::new(CommandType::Ping, ""),
-                None,
-                tags,
-            );
+            if &msg[..] == "PING" {
+                return Ok(TwitchMessage::new::<&str>(
+                    None,
+                    Command::new(CommandType::Ping, ""),
+                    None,
+                    tags,
+                ));
+            }
+            return create_error();
         };
 
         let (command, add_idx) = self.parse_command(&msg[idx..], &source);
         idx += add_idx + 1;
         let parameter = self.parse_parameter(&msg[idx..]);
-        TwitchMessage::new(parameter, command, Some(source), tags)
+        Ok(TwitchMessage::new(parameter, command, Some(source), tags))
     }
 
     fn parse_tags(&self, input: &str) -> Tags {
@@ -257,7 +275,7 @@ mod test {
         let parameters = "DansGame";
         let expected_message =
             TwitchMessage::new(Some(parameters), command, Some(source), Some(tags));
-        assert_eq!(expected_message, twitch_message);
+        assert_eq!(expected_message, twitch_message.unwrap());
     }
 
     #[test]
@@ -270,7 +288,7 @@ mod test {
         let command = Command::new(CommandType::PrivMSG, "lovingt3s");
         let parameters = "!dilly";
         let expected_message = TwitchMessage::new(Some(parameters), command, Some(source), None);
-        assert_eq!(expected_message, twitch_message);
+        assert_eq!(expected_message, twitch_message.unwrap());
     }
 
     #[test]
@@ -278,7 +296,10 @@ mod test {
         let msg: String = "PING".into();
         let parser: TrirkParser = TrirkParser::new();
         let twitch_message = parser.parse(msg);
-        assert_eq!(&CommandType::Ping, twitch_message.command().command())
+        assert_eq!(
+            &CommandType::Ping,
+            twitch_message.unwrap().command().command()
+        )
     }
 
     #[test]
@@ -298,7 +319,7 @@ mod test {
             Some(source),
             Some(tags),
         );
-        assert_eq!(expected_message, twitch_message);
+        assert_eq!(expected_message, twitch_message.unwrap());
     }
 
     #[test]
@@ -319,7 +340,7 @@ mod test {
             Some(source),
             Some(tags),
         );
-        assert_eq!(expected_message, twitch_message);
+        assert_eq!(expected_message, twitch_message.unwrap());
     }
 
     #[test]
@@ -336,7 +357,7 @@ mod test {
             .build()
             .unwrap();
         let expected_message = TwitchMessage::new(Some("ronni"), command, Some(source), Some(tags));
-        assert_eq!(expected_message, twitch_message);
+        assert_eq!(expected_message, twitch_message.unwrap());
     }
 
     #[test]
@@ -354,7 +375,7 @@ mod test {
             .build()
             .unwrap();
         let expected_message = TwitchMessage::new(Some("ronni"), command, Some(source), Some(tags));
-        assert_eq!(expected_message, twitch_message);
+        assert_eq!(expected_message, twitch_message.unwrap());
     }
 
     #[test]
@@ -373,7 +394,7 @@ mod test {
             .unwrap();
         let expected_message =
             TwitchMessage::new(Some("HeyGuys"), command, Some(source), Some(tags));
-        assert_eq!(expected_message, twitch_message);
+        assert_eq!(expected_message, twitch_message.unwrap());
     }
 
     #[test]
@@ -397,9 +418,8 @@ mod test {
             .user_id("12345678")
             .build()
             .unwrap();
-        let expected_message =
-            TwitchMessage::new::<&str>(None, command, Some(source), Some(tags));
-        assert_eq!(expected_message, twitch_message);
+        let expected_message = TwitchMessage::new::<&str>(None, command, Some(source), Some(tags));
+        assert_eq!(expected_message, twitch_message.unwrap());
     }
 
     #[test]
@@ -418,7 +438,7 @@ mod test {
             .build()
             .unwrap();
         let expected_message = TwitchMessage::new::<&str>(None, command, Some(source), Some(tags));
-        assert_eq!(expected_message, twitch_message);
+        assert_eq!(expected_message, twitch_message.unwrap());
     }
 
     #[test]
@@ -430,6 +450,19 @@ mod test {
         let source = Source::new("", "tmi.twitch.tv");
         let tags = Tags::builder().slow(10usize).build().unwrap();
         let expected_message = TwitchMessage::new::<&str>(None, command, Some(source), Some(tags));
-        assert_eq!(expected_message, twitch_message);
+        assert_eq!(expected_message, twitch_message.unwrap());
+    }
+
+    #[should_panic]
+    #[test]
+    fn should_panic_with_empty_message() {
+        let parser: TrirkParser = TrirkParser::new();
+        parser.parse("").unwrap();
+    }
+
+    #[test]
+    fn should_panic_with_invalid_message() {
+        let parser: TrirkParser = TrirkParser::new();
+        parser.parse("xablau").unwrap();
     }
 }
