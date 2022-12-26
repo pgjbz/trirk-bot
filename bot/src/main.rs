@@ -9,7 +9,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let channel = env::var("TRIRK_CHANNEL").expect("please set twitch channel env var");
     let oauth = env::var("TRIRK_OAUTH").expect("please set twitch oauth env var");
     let nickname = env::var("TRIRK_NICKNAME").expect("please set twitch nickname env var");
-    let configuration = TwitchConfig::new(channel, oauth, nickname);
+    let configuration = TwitchConfig::new(nickname, oauth, channel);
     let irc = TwitchIrc::new(configuration);
     let mut irc_connection = irc.open_connection().await?;
     println!("listen socket");
