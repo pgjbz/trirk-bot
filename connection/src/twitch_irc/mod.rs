@@ -1,4 +1,7 @@
-use std::error::Error;
+use std::{
+    error::Error,
+    ops::{Deref, DerefMut},
+};
 
 use parser::{trirk_parser::TrirkParser, TwitchMessage};
 use tokio::{
@@ -6,31 +9,48 @@ use tokio::{
     net::TcpStream,
 };
 
+use self::config::TwitchConfig;
+
+pub mod config;
+
 const IRC_HOST: &str = "irc.chat.twitch.tv";
 const IRC_PORT: usize = 6667;
 
+pub struct ClosedConnection;
+pub struct OpenedConnection(TcpStream);
+
+impl Deref for OpenedConnection {
+    type Target = TcpStream;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for OpenedConnection {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 pub struct TwitchIrc<T> {
-    channel: String,
-    oauth: String,
-    nickname: String,
+    configuration: TwitchConfig,
     connection: T,
 }
 
-impl TwitchIrc<()> {
+impl TwitchIrc<ClosedConnection> {
     #[inline(always)]
-    pub fn new<S: Into<String>>(channel: S, oauth: S, nickname: S) -> Self {
+    pub fn new(config: TwitchConfig) -> Self {
         Self {
-            channel: channel.into(),
-            oauth: oauth.into(),
-            nickname: nickname.into(),
-            connection: (),
+            configuration: config,
+            connection: ClosedConnection,
         }
     }
 
-    pub async fn open_connection(self) -> Result<TwitchIrc<TcpStream>, Box<dyn Error>> {
+    pub async fn open_connection(self) -> Result<TwitchIrc<OpenedConnection>, Box<dyn Error>> {
         println!(
             "opening connection for channel '{}', with nickname '{}'",
-            self.channel, self.nickname
+            self.configuration.channel, self.configuration.nickname
         );
         let mut connection = TcpStream::connect(format!("{}:{}", IRC_HOST, IRC_PORT)).await?;
 
@@ -38,7 +58,9 @@ impl TwitchIrc<()> {
             .write_all(
                 format!(
                     "PASS {}\r\nNICK {}\r\nJOIN #{}\r\n",
-                    self.oauth, self.nickname, self.channel
+                    self.configuration.oauth,
+                    self.configuration.nickname,
+                    self.configuration.channel
                 )
                 .as_bytes(),
             )
@@ -51,25 +73,25 @@ impl TwitchIrc<()> {
             .await?;
         connection.write_all(b"CAP REQ :twitch.tv/tags\r\n").await?;
         connection.flush().await?;
-        let irc = TwitchIrc::<TcpStream> {
-            channel: self.channel,
-            oauth: self.oauth,
-            nickname: self.nickname,
-            connection,
+        let irc = TwitchIrc::<OpenedConnection> {
+            configuration: self.configuration,
+            connection: OpenedConnection(connection),
         };
         Ok(irc)
     }
 }
 
-impl<T: AsyncReadExt + AsyncWriteExt + Unpin> TwitchIrc<T> {
+impl TwitchIrc<OpenedConnection> {
     pub async fn send_bytes(&mut self, message: &[u8]) -> Result<(), Box<dyn Error>> {
         self.connection.write_all(message).await?;
         Ok(())
     }
 
     pub async fn privmsg(&mut self, message: &str) -> Result<(), Box<dyn Error>> {
-        self.send_bytes(format!("PRIVMSG #{} :{}\r\n", self.channel, message).as_bytes())
-            .await
+        self.send_bytes(
+            format!("PRIVMSG #{} :{}\r\n", self.configuration.channel, message).as_bytes(),
+        )
+        .await
     }
 
     pub async fn read_next(&mut self) -> Result<TwitchMessage, Box<dyn Error>> {

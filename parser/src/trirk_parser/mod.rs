@@ -453,14 +453,15 @@ mod test {
         assert_eq!(expected_message, twitch_message.unwrap());
     }
 
-    #[should_panic]
     #[test]
+    #[should_panic]
     fn should_panic_with_empty_message() {
         let parser: TrirkParser = TrirkParser::new();
         parser.parse("").unwrap();
     }
 
     #[test]
+    #[should_panic]
     fn should_panic_with_invalid_message() {
         let parser: TrirkParser = TrirkParser::new();
         parser.parse("xablau").unwrap();
