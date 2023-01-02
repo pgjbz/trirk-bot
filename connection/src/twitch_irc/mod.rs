@@ -1,6 +1,6 @@
 use std::{
     error::Error,
-    ops::{Deref, DerefMut},
+    ops::{Deref, DerefMut}, marker::PhantomData,
 };
 
 use parser::{trirk_parser::TrirkParser, TwitchMessage};
@@ -33,9 +33,10 @@ impl DerefMut for OpenedConnection {
     }
 }
 
-pub struct TwitchIrc<T> {
+pub struct TwitchIrc<T = ClosedConnection> {
     configuration: TwitchConfig,
     connection: T,
+    _marker: PhantomData<T>
 }
 
 impl TwitchIrc<ClosedConnection> {
@@ -44,6 +45,7 @@ impl TwitchIrc<ClosedConnection> {
         Self {
             configuration: config,
             connection: ClosedConnection,
+            _marker: PhantomData
         }
     }
 
@@ -76,6 +78,7 @@ impl TwitchIrc<ClosedConnection> {
         let irc = TwitchIrc::<OpenedConnection> {
             configuration: self.configuration,
             connection: OpenedConnection(connection),
+            _marker: PhantomData
         };
         Ok(irc)
     }
