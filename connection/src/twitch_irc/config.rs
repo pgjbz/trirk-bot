@@ -6,7 +6,7 @@ pub struct TwitchConfig {
 
 impl TwitchConfig {
     #[inline(always)]
-    pub fn  new<T: Into<String>>(nickname: T, oauth: T, channel: T) -> Self {
+    pub fn new<T: Into<String>>(nickname: T, oauth: T, channel: T) -> Self {
         Self {
             nickname: nickname.into(),
             oauth: oauth.into(),

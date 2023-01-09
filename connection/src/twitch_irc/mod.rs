@@ -1,6 +1,7 @@
 use std::{
-    error::Error,
-    ops::{Deref, DerefMut}, marker::PhantomData,
+    io::Result,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
 };
 
 use parser::{trirk_parser::TrirkParser, TwitchMessage};
@@ -8,6 +9,8 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
+
+use crate::error::TrirkError;
 
 use self::config::TwitchConfig;
 
@@ -36,7 +39,7 @@ impl DerefMut for OpenedConnection {
 pub struct TwitchIrc<T = ClosedConnection> {
     configuration: TwitchConfig,
     connection: T,
-    _marker: PhantomData<T>
+    _marker: PhantomData<T>,
 }
 
 impl TwitchIrc<ClosedConnection> {
@@ -45,11 +48,11 @@ impl TwitchIrc<ClosedConnection> {
         Self {
             configuration: config,
             connection: ClosedConnection,
-            _marker: PhantomData
+            _marker: PhantomData,
         }
     }
 
-    pub async fn open_connection(self) -> Result<TwitchIrc<OpenedConnection>, Box<dyn Error>> {
+    pub async fn open_connection(self) -> Result<TwitchIrc<OpenedConnection>> {
         println!(
             "opening connection for channel '{}', with nickname '{}'",
             self.configuration.channel, self.configuration.nickname
@@ -78,26 +81,26 @@ impl TwitchIrc<ClosedConnection> {
         let irc = TwitchIrc::<OpenedConnection> {
             configuration: self.configuration,
             connection: OpenedConnection(connection),
-            _marker: PhantomData
+            _marker: PhantomData,
         };
         Ok(irc)
     }
 }
 
 impl TwitchIrc<OpenedConnection> {
-    pub async fn send_bytes(&mut self, message: &[u8]) -> Result<(), Box<dyn Error>> {
+    pub async fn send_bytes(&mut self, message: &[u8]) -> Result<()> {
         self.connection.write_all(message).await?;
         Ok(())
     }
 
-    pub async fn privmsg(&mut self, message: &str) -> Result<(), Box<dyn Error>> {
+    pub async fn privmsg(&mut self, message: &str) -> Result<()> {
         self.send_bytes(
             format!("PRIVMSG #{} :{}\r\n", self.configuration.channel, message).as_bytes(),
         )
         .await
     }
 
-    pub async fn read_next(&mut self) -> Result<TwitchMessage, Box<dyn Error>> {
+    pub async fn read_next(&mut self) -> std::result::Result<TwitchMessage, TrirkError> {
         let mut buffer = vec![0; 1024];
         match self.connection.read(&mut buffer).await {
             Ok(size) => {

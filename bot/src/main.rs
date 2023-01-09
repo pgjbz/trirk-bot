@@ -1,6 +1,6 @@
 use std::{env, error::Error};
 
-use connection::twitch_irc::{TwitchIrc, config::TwitchConfig};
+use connection::twitch_irc::{config::TwitchConfig, TwitchIrc};
 use dotenv::dotenv;
 
 #[tokio::main]
