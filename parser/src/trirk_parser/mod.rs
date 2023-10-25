@@ -223,7 +223,7 @@ impl TrirkParser {
     }
 
     fn parse_parameter(&self, value: &str) -> Option<String> {
-        let Some(idx) = value.find(':') else { return None };
+        let idx = value.find(':')?;
         Some(value[idx + 1..].into())
     }
 
