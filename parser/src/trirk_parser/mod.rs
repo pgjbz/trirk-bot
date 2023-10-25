@@ -29,7 +29,7 @@ impl TrirkParser {
         }
         let mut idx = 0;
         let tags: Option<Tags> = if msg.starts_with('@') {
-            let Some(space_idx) = msg.find(' ') else { panic!() };
+            let Some(space_idx) = msg.find(' ') else { Err(UnparsableError::new("message does not contains any space"))? };
             idx = space_idx + 1;
             let sub_str = &msg[0..space_idx];
             Some(self.parse_tags(sub_str))
@@ -42,7 +42,7 @@ impl TrirkParser {
         let source = if current_char == ":" {
             idx += 1;
             let sub_msg = &msg[idx..];
-            let Some(space_idx) = sub_msg.find(' ') else { panic!() };
+            let Some(space_idx) = sub_msg.find(' ') else { Err(UnparsableError::new("message does not contains any space"))? };
             let source: Source = self.parse_source(&sub_msg[..space_idx]);
             idx += space_idx + 1;
             source
