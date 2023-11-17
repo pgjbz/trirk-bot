@@ -127,6 +127,7 @@ impl Command {
 pub enum CommandType {
     PrivMSG,
     Part,
+    Join,
     Notice,
     ClearChat,
     HostTarget,
@@ -156,6 +157,7 @@ impl From<&str> for CommandType {
             "ROOMSTATE" => Self::RoomState,
             "RECONNECT" => Self::Reconnect,
             "CLEARMSG" => Self::ClearMessage,
+            "JOIN" => Self::Join,
             _ if value.parse::<usize>().is_ok() => Self::Numeric,
             _ => Self::Unknown,
         }

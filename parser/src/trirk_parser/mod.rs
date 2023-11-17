@@ -29,39 +29,42 @@ impl TrirkParser {
         }
         let mut idx = 0;
         let tags: Option<Tags> = if msg.starts_with('@') {
-            let Some(space_idx) = msg.find(' ') else { Err(UnparsableError::new("message does not contains any space"))? };
+            let Some(space_idx) = msg.find(' ') else {
+                Err(UnparsableError::new("message does not contains any space"))?
+            };
             idx = space_idx + 1;
             let sub_str = &msg[0..space_idx];
             Some(self.parse_tags(sub_str))
         } else {
             None
         };
-        let Some(current_char)= msg.get(idx..idx+1) else { 
-            return create_error();
-        };
-        let source = if current_char == ":" {
-            idx += 1;
-            let sub_msg = &msg[idx..];
-            let Some(space_idx) = sub_msg.find(' ') else { Err(UnparsableError::new("message does not contains any space"))? };
-            let source: Source = self.parse_source(&sub_msg[..space_idx]);
-            idx += space_idx + 1;
-            source
-        } else {
-            if &msg[..] == "PING" {
-                return Ok(TwitchMessage::new::<&str>(
+  
+        match (msg.get(idx..idx+1), &msg[..]) {
+            (Some(":"), _) => {
+                idx += 1;
+                let sub_msg = &msg[idx..];
+                let Some(space_idx) = sub_msg.find(' ') else {
+                    Err(UnparsableError::new("message does not contains any space"))?
+                };
+                let source: Source = self.parse_source(&sub_msg[..space_idx]);
+                idx += space_idx + 1;
+                let (command, add_idx) = self.parse_command(&msg[idx..], &source);
+                idx += add_idx + 1;
+                let parameter = self.parse_parameter(&msg[idx..]);
+                Ok(TwitchMessage::new(parameter, command, Some(source), tags))
+            } ,
+            (_, "PING") => {
+                Ok(TwitchMessage::new::<&str>(
                     None,
                     Command::new(CommandType::Ping, ""),
                     None,
                     tags,
-                ));
+                ))
             }
-            return create_error();
-        };
+            (_, msg) if msg.contains("JOIN") => todo!(),
+            _ => create_error(),
+        }
 
-        let (command, add_idx) = self.parse_command(&msg[idx..], &source);
-        idx += add_idx + 1;
-        let parameter = self.parse_parameter(&msg[idx..]);
-        Ok(TwitchMessage::new(parameter, command, Some(source), tags))
     }
 
     fn parse_tags(&self, input: &str) -> Tags {
@@ -69,8 +72,12 @@ impl TrirkParser {
         let mut tags = Tags::builder();
         for value in splited {
             let mut key_value = value.split('=');
-            let Some(key) = key_value.next() else { continue; };
-            let Some(value) = key_value.next() else { continue; };
+            let Some(key) = key_value.next() else {
+                continue;
+            };
+            let Some(value) = key_value.next() else {
+                continue;
+            };
             match key {
                 "@badges" | "badges" => {
                     let badge: Badge = self.parse_badges(value);
@@ -105,7 +112,9 @@ impl TrirkParser {
                     tags.turbo(value == "1");
                 }
                 "tmi-sent-ts" => {
-                    let Ok(value) = value.parse::<usize>() else {continue;};
+                    let Ok(value) = value.parse::<usize>() else {
+                        continue;
+                    };
                     tags.tmi_sent_ts(value);
                 }
                 "user-id" => {
@@ -168,8 +177,12 @@ impl TrirkParser {
         let mut badge = Badge::default();
         for badge_key_value in badge_pair {
             let mut key_value = badge_key_value.split('/');
-            let Some(key) = key_value.next() else { continue; };
-            let Some(value) = key_value.next() else { continue; };
+            let Some(key) = key_value.next() else {
+                continue;
+            };
+            let Some(value) = key_value.next() else {
+                continue;
+            };
             match key {
                 "admin" => badge.set_admin(value.to_owned()),
                 "bits" => badge.set_bits(value.to_owned()),
@@ -189,13 +202,25 @@ impl TrirkParser {
         let mut emotes: Vec<Emote> = Vec::new();
         for emote_key_value in emotes_pair {
             let mut code_value = emote_key_value.split(':');
-            let Some(code) = code_value.next() else { continue; };
-            let Some(position) = code_value.next() else { continue; };
+            let Some(code) = code_value.next() else {
+                continue;
+            };
+            let Some(position) = code_value.next() else {
+                continue;
+            };
             let mut start_end = position.split('-');
-            let Some(start) = start_end.next() else { continue; };
-            let Some(end) = start_end.next() else { continue; };
-            let Ok(start) = start.parse::<usize>() else { continue; };
-            let Ok(end) = end.parse::<usize>() else { continue; };
+            let Some(start) = start_end.next() else {
+                continue;
+            };
+            let Some(end) = start_end.next() else {
+                continue;
+            };
+            let Ok(start) = start.parse::<usize>() else {
+                continue;
+            };
+            let Ok(end) = end.parse::<usize>() else {
+                continue;
+            };
             let emote = Emote::new(code, start, end);
             emotes.push(emote);
         }
@@ -216,7 +241,9 @@ impl TrirkParser {
     }
 
     fn parse_command(&self, value: &str, source: &Source) -> (Command, usize) {
-        let Some(space_idx) = value.find(' ') else { return (Command::new(CommandType::from(value), source.nick()), 0) };
+        let Some(space_idx) = value.find(' ') else {
+            return (Command::new(CommandType::from(value), source.nick()), 0);
+        };
         let value = &value[..space_idx];
         let command = Command::new(CommandType::from(value), source.nick());
         (command, space_idx)
@@ -242,6 +269,33 @@ mod test {
         twitch::{Badge, Command, CommandType, Emote, Source},
         *,
     };
+
+    #[test]
+    fn should_parse_part() {
+        let msg: String = ":kyoqz!kyoqz@kyoqz.tmi.twitch.tv PART #evazord".into();
+        let parser: TrirkParser = TrirkParser::new();
+        let twitch_message = parser.parse(msg);
+
+        let source = Source::new("kyoqz", "kyoqz.tmi.twitch.tv");
+        let command = Command::new(CommandType::Part, "kyoqz");
+
+        let expected_message = TwitchMessage::new::<String>(None, command, Some(source), None);
+
+        assert_eq!(Ok(expected_message), twitch_message);
+    }
+
+    #[test]
+    fn should_parse_join() {
+        let msg: String = "renildson!renildson@renildson.tmi.twitch.tv JOIN #evazord".into();
+        let parser: TrirkParser = TrirkParser::new();
+        let twitch_message = parser.parse(msg);
+
+        let source = Source::new("renildson", "renildson.tmi.twitch.tv");
+        let command = Command::new(CommandType::Join, "petsgomoo");
+
+        let expected_message = TwitchMessage::new::<String>(None, command, Some(source), None);
+        assert_eq!(Ok(expected_message), twitch_message);
+    }
 
     #[test]
     fn should_parse_message_with_tags() {
@@ -275,7 +329,7 @@ mod test {
         let parameters = "DansGame";
         let expected_message =
             TwitchMessage::new(Some(parameters), command, Some(source), Some(tags));
-        assert_eq!(expected_message, twitch_message.unwrap());
+        assert_eq!(Ok(expected_message), twitch_message);
     }
 
     #[test]
@@ -288,7 +342,7 @@ mod test {
         let command = Command::new(CommandType::PrivMSG, "lovingt3s");
         let parameters = "!dilly";
         let expected_message = TwitchMessage::new(Some(parameters), command, Some(source), None);
-        assert_eq!(expected_message, twitch_message.unwrap());
+        assert_eq!(Ok(expected_message), twitch_message);
     }
 
     #[test]
@@ -319,7 +373,7 @@ mod test {
             Some(source),
             Some(tags),
         );
-        assert_eq!(expected_message, twitch_message.unwrap());
+        assert_eq!(Ok(expected_message), twitch_message);
     }
 
     #[test]
@@ -340,7 +394,7 @@ mod test {
             Some(source),
             Some(tags),
         );
-        assert_eq!(expected_message, twitch_message.unwrap());
+        assert_eq!(Ok(expected_message), twitch_message);
     }
 
     #[test]
@@ -357,7 +411,7 @@ mod test {
             .build()
             .unwrap();
         let expected_message = TwitchMessage::new(Some("ronni"), command, Some(source), Some(tags));
-        assert_eq!(expected_message, twitch_message.unwrap());
+        assert_eq!(Ok(expected_message), twitch_message);
     }
 
     #[test]
@@ -375,7 +429,7 @@ mod test {
             .build()
             .unwrap();
         let expected_message = TwitchMessage::new(Some("ronni"), command, Some(source), Some(tags));
-        assert_eq!(expected_message, twitch_message.unwrap());
+        assert_eq!(Ok(expected_message), twitch_message);
     }
 
     #[test]
@@ -394,7 +448,7 @@ mod test {
             .unwrap();
         let expected_message =
             TwitchMessage::new(Some("HeyGuys"), command, Some(source), Some(tags));
-        assert_eq!(expected_message, twitch_message.unwrap());
+        assert_eq!(Ok(expected_message), twitch_message);
     }
 
     #[test]
@@ -419,7 +473,7 @@ mod test {
             .build()
             .unwrap();
         let expected_message = TwitchMessage::new::<&str>(None, command, Some(source), Some(tags));
-        assert_eq!(expected_message, twitch_message.unwrap());
+        assert_eq!(Ok(expected_message), twitch_message);
     }
 
     #[test]
@@ -438,7 +492,7 @@ mod test {
             .build()
             .unwrap();
         let expected_message = TwitchMessage::new::<&str>(None, command, Some(source), Some(tags));
-        assert_eq!(expected_message, twitch_message.unwrap());
+        assert_eq!(Ok(expected_message), twitch_message);
     }
 
     #[test]
@@ -450,7 +504,7 @@ mod test {
         let source = Source::new("", "tmi.twitch.tv");
         let tags = Tags::builder().slow(10usize).build().unwrap();
         let expected_message = TwitchMessage::new::<&str>(None, command, Some(source), Some(tags));
-        assert_eq!(expected_message, twitch_message.unwrap());
+        assert_eq!(Ok(expected_message), twitch_message);
     }
 
     #[test]

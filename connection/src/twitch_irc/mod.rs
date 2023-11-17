@@ -18,6 +18,7 @@ pub mod config;
 
 const IRC_HOST: &str = "irc.chat.twitch.tv";
 const IRC_PORT: usize = 6667;
+const CAP_REQ: &str = "CAP REQ :twitch.tv/";
 
 pub struct ClosedConnection;
 pub struct OpenedConnection(TcpStream);
@@ -62,21 +63,16 @@ impl TwitchIrc<ClosedConnection> {
         connection
             .write_all(
                 format!(
-                    "PASS {}\r\nNICK {}\r\nJOIN #{}\r\n",
-                    self.configuration.oauth,
-                    self.configuration.nickname,
-                    self.configuration.channel
+                    "PASS {pass}\r\nNICK {user}\r\nJOIN #{join}\r\n{CAP_REQ}{command}\r\n{CAP_REQ}{membership}\r\n{CAP_REQ}{tags}\r\n",
+                    pass = self.configuration.oauth,
+                    user = self.configuration.nickname,
+                    join = self.configuration.channel,
+                    command = "commands",
+                    membership = "membership",
+                    tags = "tags"
                 )
                 .as_bytes(),
-            )
-            .await?;
-        connection
-            .write_all(b"CAP REQ :twitch.tv/commands\r\n")
-            .await?;
-        connection
-            .write_all(b"CAP REQ :twitch.tv/membership\r\n")
-            .await?;
-        connection.write_all(b"CAP REQ :twitch.tv/tags\r\n").await?;
+            ).await?;
         connection.flush().await?;
         let irc = TwitchIrc::<OpenedConnection> {
             configuration: self.configuration,
