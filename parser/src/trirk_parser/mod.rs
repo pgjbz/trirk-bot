@@ -38,8 +38,8 @@ impl TrirkParser {
         } else {
             None
         };
-  
-        match (msg.get(idx..idx+1), &msg[..]) {
+
+        match (msg.get(idx..idx + 1), &msg[..]) {
             (Some(":"), _) => {
                 idx += 1;
                 let sub_msg = &msg[idx..];
@@ -52,19 +52,16 @@ impl TrirkParser {
                 idx += add_idx + 1;
                 let parameter = self.parse_parameter(&msg[idx..]);
                 Ok(TwitchMessage::new(parameter, command, Some(source), tags))
-            } ,
-            (_, "PING") => {
-                Ok(TwitchMessage::new::<&str>(
-                    None,
-                    Command::new(CommandType::Ping, ""),
-                    None,
-                    tags,
-                ))
             }
-            (_, msg) if msg.contains("JOIN") => todo!(),
+            (_, "PING") => Ok(TwitchMessage::new::<&str>(
+                None,
+                Command::new(CommandType::Ping, ""),
+                None,
+                tags,
+            )),
+            (_, msg) if msg.contains("JOIN") => self.parse_join(msg),
             _ => create_error(),
         }
-
     }
 
     fn parse_tags(&self, input: &str) -> Tags {
@@ -260,6 +257,35 @@ impl TrirkParser {
             .map(|v| v.parse::<usize>().unwrap_or(0))
             .collect()
     }
+
+    fn parse_join(&self, msg: &str) -> Result<TwitchMessage, UnparsableError> {
+        //renildson!renildson@renildson.tmi.twitch.tv JOIN #evazord
+        let Some(nick) = msg.split("!").next() else {
+            Err(UnparsableError::new(format!(
+                "error on parse '{}', not have '!'",
+                msg
+            )))?
+        };
+        let mut idx = (nick.len() * 2) + 2;
+        dbg!(idx);
+        //renildson.tmi.twitch.tv JOIN #evazord
+        let sub_msg = &msg[idx..];
+
+        let Some(host) = sub_msg.split(' ').next() else {
+            Err(UnparsableError::new(format!(
+                "error on parse '{}', not have host",
+                msg
+            )))?
+        };
+        idx += host.len() + 7;
+        let channel = &msg[idx..];
+        Ok(TwitchMessage::new::<String>(
+            None,
+            Command::new(CommandType::Join, channel),
+            Some(Source::new(nick, host)),
+            None,
+        ))
+    }
 }
 
 #[cfg(test)]
@@ -291,7 +317,7 @@ mod test {
         let twitch_message = parser.parse(msg);
 
         let source = Source::new("renildson", "renildson.tmi.twitch.tv");
-        let command = Command::new(CommandType::Join, "petsgomoo");
+        let command = Command::new(CommandType::Join, "evazord");
 
         let expected_message = TwitchMessage::new::<String>(None, command, Some(source), None);
         assert_eq!(Ok(expected_message), twitch_message);
