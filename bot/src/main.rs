@@ -54,6 +54,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         .clone()
                         .map_or("".into(), |tag| tag.display_name().clone())
                 ),
+                CommandType::UserNotice => println!("user notice: {msg:?}"),
                 _ => println!("'{msg:?}'not implemented yet"),
             },
             Err(e) => eprintln!("{e}"),

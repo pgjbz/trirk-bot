@@ -139,6 +139,7 @@ pub enum CommandType {
     RoomState,
     Reconnect,
     Numeric(u16),
+    UserNotice,
     Unknown(String),
 }
 
@@ -158,6 +159,7 @@ impl From<&str> for CommandType {
             "RECONNECT" => Self::Reconnect,
             "CLEARMSG" => Self::ClearMessage,
             "JOIN" => Self::Join,
+            "USERNOTICE" => Self::UserNotice,
             v if value.parse::<u16>().is_ok() => Self::Numeric(v.parse().unwrap()),
             cmd => Self::Unknown(cmd.into()),
         }
