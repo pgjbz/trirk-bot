@@ -138,8 +138,8 @@ pub enum CommandType {
     UserState,
     RoomState,
     Reconnect,
-    Numeric,
-    Unknown,
+    Numeric(u16),
+    Unknown(String),
 }
 
 impl From<&str> for CommandType {
@@ -158,8 +158,8 @@ impl From<&str> for CommandType {
             "RECONNECT" => Self::Reconnect,
             "CLEARMSG" => Self::ClearMessage,
             "JOIN" => Self::Join,
-            _ if value.parse::<usize>().is_ok() => Self::Numeric,
-            _ => Self::Unknown,
+            v if value.parse::<u16>().is_ok() => Self::Numeric(v.parse().unwrap()),
+            cmd => Self::Unknown(cmd.into()),
         }
     }
 }
@@ -205,7 +205,7 @@ impl Badge {
     }
 }
 
-#[derive(PartialEq, Eq, Debug, Clone, Getters)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Source {
     nick: String,
     host: String,
@@ -218,5 +218,13 @@ impl Source {
             nick: nick.into(),
             host: host.into(),
         }
+    }
+
+    pub fn nick(&self) -> String {
+        self.nick.clone()
+    }
+
+    pub fn host(&self) -> String {
+        self.host.clone()
     }
 }

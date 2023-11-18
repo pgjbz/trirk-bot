@@ -12,18 +12,12 @@ pub struct TrirkParser;
 
 impl TrirkParser {
     #[inline(always)]
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        Self
     }
 
     pub fn parse<T: Into<String>>(&self, msg: T) -> Result<TwitchMessage, UnparsableError> {
         let msg: String = msg.into();
-        let create_error = || {
-            Err(UnparsableError::new(format!(
-                "error on parse message: {}",
-                msg
-            )))
-        };
         if msg.is_empty() {
             return Err(UnparsableError::new("empty irc message"));
         }
@@ -60,7 +54,11 @@ impl TrirkParser {
                 tags,
             )),
             (_, msg) if msg.contains("JOIN") => self.parse_join(msg),
-            _ => create_error(),
+            (current_char, msg) => Err(UnparsableError::new(format!(
+                "ERROR: could not parse message '{msg}' {complement}",
+                complement = current_char
+                    .map_or("".into(), |current| format!("with start char '{current}'"))
+            ))),
         }
     }
 
@@ -259,21 +257,18 @@ impl TrirkParser {
     }
 
     fn parse_join(&self, msg: &str) -> Result<TwitchMessage, UnparsableError> {
-        //renildson!renildson@renildson.tmi.twitch.tv JOIN #evazord
-        let Some(nick) = msg.split("!").next() else {
+        let Some(nick) = msg.split('!').next() else {
             Err(UnparsableError::new(format!(
-                "error on parse '{}', not have '!'",
+                "ERROR: could not parse '{}', not have '!'",
                 msg
             )))?
         };
         let mut idx = (nick.len() * 2) + 2;
-        dbg!(idx);
-        //renildson.tmi.twitch.tv JOIN #evazord
         let sub_msg = &msg[idx..];
 
         let Some(host) = sub_msg.split(' ').next() else {
             Err(UnparsableError::new(format!(
-                "error on parse '{}', not have host",
+                "ERROR: could not parse '{}', not have host",
                 msg
             )))?
         };
@@ -282,7 +277,7 @@ impl TrirkParser {
         Ok(TwitchMessage::new::<String>(
             None,
             Command::new(CommandType::Join, channel),
-            Some(Source::new(nick, host)),
+            Some(Source::new(nick.replace(':', ""), host.into())),
             None,
         ))
     }

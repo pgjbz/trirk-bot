@@ -83,6 +83,8 @@ impl TwitchIrc<ClosedConnection> {
     }
 }
 
+const PARSER: TrirkParser = TrirkParser::new();
+
 impl TwitchIrc<OpenedConnection> {
     pub async fn send_bytes(&mut self, message: &[u8]) -> Result<()> {
         self.connection.write_all(message).await?;
@@ -101,13 +103,16 @@ impl TwitchIrc<OpenedConnection> {
         match self.connection.read(&mut buffer).await {
             Ok(size) => {
                 buffer.truncate(size);
-                let message = String::from_utf8_lossy(&buffer);
-                let trirk_parser = TrirkParser::new();
-                let twitch_message = trirk_parser.parse(message)?;
+                let message = String::from_utf8(buffer)?;
+                let twitch_message = PARSER.parse(message)?;
                 Ok(twitch_message)
             }
             Err(e) => Err(e)?,
         }
+    }
+
+    pub async fn pong(&mut self) -> Result<()> {
+        self.send_bytes(b"PONG\r\n").await
     }
 }
 

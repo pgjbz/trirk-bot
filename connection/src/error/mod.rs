@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Display};
+use std::{error::Error, fmt::Display, string::FromUtf8Error};
 
 use parser::trirk_parser::error::UnparsableError;
 
@@ -18,6 +18,7 @@ impl Display for TrirkError {
 pub enum TrirkErrorKind {
     Parse,
     Io,
+    Utf8,
 }
 
 impl From<UnparsableError> for TrirkError {
@@ -38,4 +39,12 @@ impl From<std::io::Error> for TrirkError {
     }
 }
 
+impl From<FromUtf8Error> for TrirkError {
+    fn from(value: FromUtf8Error) -> Self {
+        Self {
+            message: value.to_string(),
+            kind: TrirkErrorKind::Utf8,
+        }
+    }
+}
 impl Error for TrirkError {}
