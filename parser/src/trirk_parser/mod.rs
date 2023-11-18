@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use self::{
     error::UnparsableError,
     twitch::{Badge, Command, CommandType, Emote, Source, Tags, TwitchMessage},
@@ -65,6 +67,7 @@ impl TrirkParser {
     fn parse_tags(&self, input: &str) -> Tags {
         let splited = input.split(';');
         let mut tags = Tags::builder();
+        let mut extra_tags = HashMap::new();
         for value in splited {
             let mut key_value = value.split('=');
             let Some(key) = key_value.next() else {
@@ -161,9 +164,12 @@ impl TrirkParser {
                 "subs-only" => {
                     tags.subs_only(value == "1");
                 }
-                _ => continue,
+                unk => {
+                    extra_tags.insert(unk.into(), value.into());
+                }
             }
         }
+        tags.extra_tags(extra_tags);
         tags.build().unwrap()
     }
 

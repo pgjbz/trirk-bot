@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use derive_builder::Builder;
 use derive_getters::Getters;
 
@@ -54,6 +56,7 @@ pub struct Tags {
     r9k: bool,
     slow: usize,
     subs_only: bool,
+    extra_tags: HashMap<String, String>,
 }
 
 impl Tags {
