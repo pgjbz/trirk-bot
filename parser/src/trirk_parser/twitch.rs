@@ -87,6 +87,7 @@ impl Tags {
             .r9k(false)
             .slow(usize::MIN)
             .subs_only(false)
+            .extra_tags(HashMap::new())
             .id("");
         builder
     }

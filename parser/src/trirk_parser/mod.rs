@@ -335,6 +335,8 @@ mod test {
         badges.set_staff("1".into());
         badges.set_broadcaster("1".into());
         badges.set_turbo("1".into());
+        let mut extra_tags = HashMap::new();
+        extra_tags.insert("flags".into(), "0-7:A.6/P.6,25-36:A.1/I.2".into());
         let tags = Tags::builder()
             .badges(badges)
             .color("#FF0000")
@@ -351,6 +353,7 @@ mod test {
             .user_type("staff")
             .vip(false)
             .reply_parent_msg_id("")
+            .extra_tags(extra_tags)
             .build()
             .unwrap();
         let parameters = "DansGame";
@@ -486,6 +489,8 @@ mod test {
         let source = Source::new("", "tmi.twitch.tv");
         let command = Command::new(CommandType::GlobalUserState, "");
         let mut badges = Badge::default();
+        let mut extra_tags = HashMap::new();
+        extra_tags.insert("@badge-info".into(), "subscriber/8".into());
         badges.set_subscriber("6".into());
         let tags = Tags::builder()
             .badges(badges)
@@ -497,6 +502,7 @@ mod test {
             ])
             .user_type("admin")
             .user_id("12345678")
+            .extra_tags(extra_tags)
             .build()
             .unwrap();
         let expected_message = TwitchMessage::new::<&str>(None, command, Some(source), Some(tags));

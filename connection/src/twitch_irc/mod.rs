@@ -20,6 +20,7 @@ const IRC_HOST: &str = "irc.chat.twitch.tv";
 const IRC_PORT: usize = 6667;
 const CAP_REQ: &str = "CAP REQ :twitch.tv/";
 
+#[derive(Clone)]
 pub struct ClosedConnection;
 pub struct OpenedConnection(TcpStream);
 
@@ -37,6 +38,7 @@ impl DerefMut for OpenedConnection {
     }
 }
 
+#[derive(Clone)]
 pub struct TwitchIrc<T = ClosedConnection> {
     configuration: TwitchConfig,
     connection: T,

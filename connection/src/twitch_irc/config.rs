@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct TwitchConfig {
     pub(super) channel: String,
     pub(super) oauth: String,
