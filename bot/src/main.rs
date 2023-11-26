@@ -18,16 +18,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let irc = TwitchIrc::new(configuration);
     loop {
         let mut irc_connection = irc.clone().open_connection().await?;
-        println!("listen socket");
-        //TODO: handle clear message with ban duration
+        //TODO: handle user notice with extra tag msg-id: resub, maybe msg-id sub
         'message: loop {
             match irc_connection.read_next().await {
                 Ok(msg) => match msg.command().command() {
+                    CommandType::ClearChat => {
+                        if let Some(tags) = msg.tags() {
+                            if *tags.ban_duration() > 0 {
+                                let _ = irc_connection
+                                    .privmsg(&format!(
+                                        "foi de base por {duration}s",
+                                        duration = tags.ban_duration()
+                                    ))
+                                    .await
+                                    .map_err(|err| {
+                                        eprintln!("ERROR: could not send message privmsg: {err}")
+                                    });
+                            }
+                        }
+                    }
                     CommandType::Join => println!(
                         "{} entrou na brincadeira",
                         msg.source().clone().map_or(IRINEU.into(), |s| s.nick())
                     ),
-                    CommandType::Part => println!(
+                    CommandType::Part(_) => println!(
                         "{} saiu da brincadeira",
                         msg.source().clone().map_or(IRINEU.into(), |s| s.nick())
                     ),

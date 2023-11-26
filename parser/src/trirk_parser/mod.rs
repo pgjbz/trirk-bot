@@ -35,6 +35,7 @@ impl TrirkParser {
             None
         };
 
+        //FIX: parse PING
         match (msg.get(idx..idx + 1), &msg[..]) {
             (Some(":"), _) => {
                 idx += 1;
@@ -49,12 +50,13 @@ impl TrirkParser {
                 let parameter = self.parse_parameter(&msg[idx..]);
                 Ok(TwitchMessage::new(parameter, command, Some(source), tags))
             }
-            (_, "PING") => Ok(TwitchMessage::new::<&str>(
+            (_, msg) if msg.contains("PING") => Ok(TwitchMessage::new::<&str>(
                 None,
                 Command::new(CommandType::Ping, ""),
                 None,
                 tags,
             )),
+            (_, msg) if msg.contains("PART") => self.parse_part(msg),
             (_, msg) if msg.contains("JOIN") => self.parse_join(msg),
             (current_char, msg) => Err(UnparsableError::new(format!(
                 "ERROR: could not parse message '{msg}' {complement}",
@@ -287,6 +289,10 @@ impl TrirkParser {
             None,
         ))
     }
+
+    fn parse_part(&self, _msg: &str) -> Result<TwitchMessage, UnparsableError> {
+        Err(UnparsableError::new("PART: not implemented yet"))
+    }
 }
 
 #[cfg(test)]
@@ -298,13 +304,14 @@ mod test {
     };
 
     #[test]
+    //FIX: mult part messages
     fn should_parse_part() {
         let msg: String = ":kyoqz!kyoqz@kyoqz.tmi.twitch.tv PART #evazord".into();
         let parser: TrirkParser = TrirkParser::new();
         let twitch_message = parser.parse(msg);
 
         let source = Source::new("kyoqz", "kyoqz.tmi.twitch.tv");
-        let command = Command::new(CommandType::Part, "kyoqz");
+        let command = Command::new(CommandType::Part(vec!["kyoqz".into()]), "kyoqz");
 
         let expected_message = TwitchMessage::new::<String>(None, command, Some(source), None);
 

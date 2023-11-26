@@ -130,7 +130,7 @@ impl Command {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum CommandType {
     PrivMSG,
-    Part,
+    Part(Vec<String>),
     Join,
     Notice,
     ClearChat,
@@ -151,7 +151,7 @@ impl From<&str> for CommandType {
     fn from(value: &str) -> Self {
         match value {
             "PRIVMSG" => Self::PrivMSG,
-            "PART" => Self::Part,
+            "PART" => Self::Part(vec![]),
             "NOTICE" => Self::Notice,
             "CLEARCHAT" => Self::ClearChat,
             "HOSTTARGEtT" => Self::HostTarget,
