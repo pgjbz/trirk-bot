@@ -332,6 +332,45 @@ mod test {
     }
 
     #[test]
+    fn should_parse_message_correct() {
+        let msg: String = "@badge-info=;badges=moderator/1,partner/1;client-nonce=01HG4N38VEHHKQWBHXDNKEFN33;color=#5B99FF;display-name=StreamElements;emotes=;first-msg=0;flags=;id=3af8a524-f6c3-41b0-a54f-c254d6462928;mod=1;returning-chatter=0;room-id=72319043;subscriber=0;tmi-sent-ts=1700963394447;turbo=0;user-id=100135110;user-type=mod :streamelements!streamelements@streamelements.tmi.twitch.tv PRIVMSG #kingvenom :Lista de Musicas do Songrequest: https://nightbot.tv/t/kingvenom/song_requests".into();
+        let parser: TrirkParser = TrirkParser::new();
+        let twitch_message = parser.parse(msg);
+        let source = Source::new("streamelements", "streamelements.tmi.twitch.tv");
+        let command = Command::new(CommandType::PrivMSG, "streamelements");
+        let mut badges = Badge::default();
+        badges.set_moderator("1".into());
+        let mut extra_tags = HashMap::new();
+        extra_tags.insert("client-nonce".into(), "01HG4N38VEHHKQWBHXDNKEFN33".into());
+        extra_tags.insert("returning-chatter".into(), "0".into());
+        extra_tags.insert("@badge-info".into(), "".into());
+        extra_tags.insert("first-msg".into(), "0".into());
+        extra_tags.insert("flags".into(), "".into());
+        let tags = Tags::builder()
+            .badges(badges)
+            .color("#5B99FF")
+            .display_name("StreamElements")
+            .emote_only(false)
+            .id("3af8a524-f6c3-41b0-a54f-c254d6462928")
+            .r#mod(true)
+            .room_id("72319043")
+            .subscriber(false)
+            .turbo(false)
+            .tmi_sent_ts(1700963394447usize)
+            .user_id("100135110")
+            .user_type("mod")
+            .vip(false)
+            .reply_parent_msg_id("")
+            .extra_tags(extra_tags)
+            .build()
+            .unwrap();
+        let parameters = "Lista de Musicas do Songrequest: https://nightbot.tv/t/kingvenom/song_requests";
+        let expected_message =
+            TwitchMessage::new(Some(parameters), command, Some(source), Some(tags));
+        assert_eq!(Ok(expected_message), twitch_message);
+    }
+
+    #[test]
     fn should_parse_message_with_tags() {
         let msg: String = "@badges=staff/1,broadcaster/1,turbo/1;color=#FF0000;display-name=PetsgomOO;emote-only=1;emotes=33:0-7;flags=0-7:A.6/P.6,25-36:A.1/I.2;id=c285c9ed-8b1b-4702-ae1c-c64d76cc74ef;mod=0;room-id=81046256;subscriber=0;turbo=0;tmi-sent-ts=1550868292494;user-id=81046256;user-type=staff :petsgomoo!petsgomoo@petsgomoo.tmi.twitch.tv PRIVMSG #petsgomoo :DansGame".into();
         let parser: TrirkParser = TrirkParser::new();
@@ -487,6 +526,7 @@ mod test {
             TwitchMessage::new(Some("HeyGuys"), command, Some(source), Some(tags));
         assert_eq!(Ok(expected_message), twitch_message);
     }
+
 
     #[test]
     fn should_parse_globaluserstate() {

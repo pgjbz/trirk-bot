@@ -27,7 +27,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             if *tags.ban_duration() > 0 {
                                 let _ = irc_connection
                                     .privmsg(&format!(
-                                        "foi de base por {duration}s",
+                                        "{nickname} foi de base por {duration}s",
+                                        nickname = msg.source().clone().map_or(IRINEU.into(), |s| s.nick()),
                                         duration = tags.ban_duration()
                                     ))
                                     .await
