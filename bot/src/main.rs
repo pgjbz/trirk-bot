@@ -22,13 +22,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
         'message: loop {
             match irc_connection.read_next().await {
                 Ok(msg) => match msg.command().command() {
+                    CommandType::UserNotice if msg.tags().is_some() => {
+                        let tags = msg.tags().as_ref().unwrap();
+                        let extra_tags = tags.extra_tags();
+                        if let Some(sub) = extra_tags.get("msg-id") {
+                            if sub.contains("sub") {
+                                let _ = irc_connection.privmsg(&format!(
+                                    "{nickname} fez a boa PogChamp",
+                                    nickname = tags.display_name()
+                                ));
+                            }
+                        }
+                    }
                     CommandType::ClearChat => {
+                 
                         if let Some(tags) = msg.tags() {
                             if *tags.ban_duration() > 0 {
                                 let _ = irc_connection
                                     .privmsg(&format!(
                                         "{nickname} foi de base por {duration}s",
-                                        nickname = msg.source().clone().map_or(IRINEU.into(), |s| s.nick()),
+                                        nickname = msg.parameters().as_ref().map_or(IRINEU.into(), |p| p.replace('\n', "")),
                                         duration = tags.ban_duration()
                                     ))
                                     .await
@@ -40,16 +53,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     }
                     CommandType::Join => println!(
                         "{} entrou na brincadeira",
-                        msg.source().clone().map_or(IRINEU.into(), |s| s.nick())
+                        msg.source().as_ref().map_or(IRINEU.into(), |s| s.nick())
                     ),
                     CommandType::Part(_) => println!(
                         "{} saiu da brincadeira",
-                        msg.source().clone().map_or(IRINEU.into(), |s| s.nick())
+                        msg.source().as_ref().map_or(IRINEU.into(), |s| s.nick())
                     ),
                     CommandType::PrivMSG => print!(
                         "{}: {}",
-                        msg.source().clone().map_or(IRINEU.into(), |s| s.nick()),
-                        msg.parameters().clone().map_or("".into(), |p| p)
+                        msg.source().as_ref().map_or(IRINEU.into(), |s| s.nick()),
+                        msg.parameters().as_ref().map_or("", |p| p)
                     ),
                     CommandType::Numeric(n) => match *n {
                         1 => {
@@ -65,12 +78,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             .await
                             .map_err(|err| eprintln!("ERROR: could not send pong message: {err}"));
                     }
-                    CommandType::UserState => println!(
-                        "user state?... {}",
-                        msg.tags()
-                            .clone()
-                            .map_or("".into(), |tag| tag.display_name().clone())
-                    ),
+                    CommandType::UserState => {
+                        dbg!(msg);
+                    }
+
                     CommandType::UserNotice => println!("user notice: {msg:?}"),
                     _ => println!("'{msg:?}'not implemented yet"),
                 },
