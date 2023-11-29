@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let mut irc_connection = irc.clone().open_connection().await?;
         //TODO: handle user notice with extra tag msg-id: resub, maybe msg-id sub
         'message: loop {
-            match irc_connection.read_next().await {
+            match irc_connection.read_next() {
                 Ok(msg) => match msg.command().command() {
                     CommandType::UserNotice if msg.tags().is_some() => {
                         let tags = msg.tags().as_ref().unwrap();
@@ -44,7 +44,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                         nickname = msg.parameters().as_ref().map_or(IRINEU.into(), |p| p.replace('\n', "")),
                                         duration = tags.ban_duration()
                                     ))
-                                    .await
                                     .map_err(|err| {
                                         eprintln!("ERROR: could not send message privmsg: {err}")
                                     });
@@ -75,7 +74,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     CommandType::Ping => {
                         let _ = irc_connection
                             .pong()
-                            .await
                             .map_err(|err| eprintln!("ERROR: could not send pong message: {err}"));
                     }
                     CommandType::UserState => {

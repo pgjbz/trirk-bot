@@ -1,14 +1,10 @@
 use std::{
-    io::Result,
+    io::{Result, Write, Read},
     marker::PhantomData,
-    ops::{Deref, DerefMut},
+    ops::{Deref, DerefMut}, net::TcpStream,
 };
 
 use parser::{trirk_parser::TrirkParser, TwitchMessage};
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpStream,
-};
 
 use crate::error::TrirkError;
 
@@ -60,7 +56,7 @@ impl TwitchIrc<ClosedConnection> {
             "opening connection for channel '{}', with nickname '{}'",
             self.configuration.channel, self.configuration.nickname
         );
-        let mut connection = TcpStream::connect(format!("{}:{}", IRC_HOST, IRC_PORT)).await?;
+        let mut connection = TcpStream::connect(format!("{}:{}", IRC_HOST, IRC_PORT))?;
 
         connection
             .write_all(
@@ -74,8 +70,8 @@ impl TwitchIrc<ClosedConnection> {
                     tags = "tags"
                 )
                 .as_bytes(),
-            ).await?;
-        connection.flush().await?;
+            )?;
+        connection.flush()?;
         let irc = TwitchIrc::<OpenedConnection> {
             configuration: self.configuration,
             connection: OpenedConnection(connection),
@@ -88,21 +84,20 @@ impl TwitchIrc<ClosedConnection> {
 const PARSER: TrirkParser = TrirkParser::new();
 
 impl TwitchIrc<OpenedConnection> {
-    pub async fn send_bytes(&mut self, message: &[u8]) -> Result<()> {
-        self.connection.write_all(message).await?;
+    pub fn send_bytes(&mut self, message: &[u8]) -> Result<()> {
+        self.connection.write_all(message)?;
         Ok(())
     }
 
-    pub async fn privmsg(&mut self, message: &str) -> Result<()> {
+    pub fn privmsg(&mut self, message: &str) -> Result<()> {
         self.send_bytes(
             format!("PRIVMSG #{} :{}\r\n", self.configuration.channel, message).as_bytes(),
         )
-        .await
     }
 
-    pub async fn read_next(&mut self) -> std::result::Result<TwitchMessage, TrirkError> {
+    pub fn read_next(&mut self) -> std::result::Result<TwitchMessage, TrirkError> {
         let mut buffer = vec![0; 1024];
-        match self.connection.read(&mut buffer).await {
+        match self.connection.read(&mut buffer) {
             Ok(size) => {
                 buffer.truncate(size);
                 let message = String::from_utf8(buffer)?;
@@ -113,8 +108,8 @@ impl TwitchIrc<OpenedConnection> {
         }
     }
 
-    pub async fn pong(&mut self) -> Result<()> {
-        self.send_bytes(b"PONG\r\n").await
+    pub fn pong(&mut self) -> Result<()> {
+        self.send_bytes(b"PONG\r\n")
     }
 }
 
